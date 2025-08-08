@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}{{ law_name }} - {{ year }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ law_name }} - {{ year }}</h1>
+    <p>Please select a file to view its content.</p>
+</div>
+
+<div class="court-grid">
+    {% for file in files %}
+    <a href="/acts/{{ law_name_folder }}/{{ year }}/{{ file }}" class="court-card-link">
+        <div class="court-card">
+            <i class="fas fa-file-alt court-icon"></i>
+            <span class="court-name">{{ file }}</span>
+        </div>
+    </a>
+    {% else %}
+    <p>No files found for this year.</p>
+    {% endfor %}
+</div>
+{% endblock %}

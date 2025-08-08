@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}{{ full_title }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/custom_act_style.css') }}">
+
+<div class="document-view">
+    <div class="section-header">
+        <h2 class="page-type-heading">{{ page_type }}</h2>
+        <h1 class="full-title-heading">{{ full_title }}</h1>
+    </div>
+    <div class="section-content-wrapper">
+        {{ content|safe }}
+    </div>
+</div>
+{% endblock %}

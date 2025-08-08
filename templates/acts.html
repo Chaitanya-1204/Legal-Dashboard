@@ -9,17 +9,15 @@
 </div>
 
 <div class="acts-container">
-    {% for category, laws in acts_data.items() %}
+    {% for law_type, laws in acts_by_law_type %}
     <section class="act-category">
-        <h2 class="category-title">{{ category }}</h2>
-        <!-- Using the same 'court-grid' class for a consistent card layout -->
+        <h2 class="category-title">{{ law_type }}</h2>
         <div class="court-grid">
-            {% for law in laws %}
-            <a href="/acts/{{ category }}/{{ law }}" class="court-card-link">
+            {% for index, law in laws.iterrows() %}
+            <a href="/acts/{{ law.folder_name }}" class="court-card-link">
                 <div class="court-card">
-                    <!-- Using a generic scroll icon for acts -->
                     <i class="fas fa-scroll court-icon"></i>
-                    <span class="court-name">{{ law }}</span>
+                    <span class="court-name">{{ law.category_name }}</span>
                 </div>
             </a>
             {% endfor %}

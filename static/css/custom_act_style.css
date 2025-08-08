@@ -1,0 +1,200 @@
+/* static/css/custom_act_style.css */
+
+/* Main container for the entire document view */
+.document-view {
+    max-width: 900px;
+    margin: 2rem auto; /* Center the document with some top/bottom margin */
+    background-color: #ffffff;
+    padding: 2rem 3rem; /* Add generous padding */
+    border: 1px solid #d1d5db; /* A light grey border */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-radius: 8px;
+    font-family: 'Times New Roman', Times, serif; /* Classic font for legal docs */
+}
+
+/* Main source heading, e.g., "Constitution and Amendments" */
+.docsource_main {
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: normal;
+    color: #4b5563; /* A muted grey color */
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* The primary title of the document */
+.doc_title {
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 2rem;
+    color: #111827; /* Darker text for the main title */
+    line-height: 1.4;
+}
+
+/* Container for the metadata block */
+.coverpage {
+    background-color: #f9fafb; /* A very light grey background */
+    border: 1px solid #e5e7eb;
+    padding: 1.5rem;
+    margin-bottom: 2.5rem;
+    border-radius: 6px;
+}
+
+.coverpage h1, .coverpage h2 {
+    text-align: center;
+    margin: 0;
+}
+
+.coverpage h1 {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #1f2937;
+}
+
+.coverpage h2 {
+    font-size: 1.1rem;
+    font-weight: normal;
+    color: #4b5563;
+    margin-top: 0.25rem;
+}
+
+/* Styling for the list of notices (Published, Commenced, etc.) */
+.notice-list {
+    list-style-type: none; /* Remove default bullet points */
+    padding: 0;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: #6b7280; /* Lighter text for metadata */
+}
+
+.notice-list li {
+    padding-left: 1.5rem;
+    position: relative;
+    margin-bottom: 0.5rem;
+}
+
+/* Custom bullet points for the notice list */
+.notice-list li::before {
+    content: '■';
+    position: absolute;
+    left: 0;
+    color: #9ca3af;
+    font-size: 0.8rem;
+}
+
+/* The main body of the act */
+.akn-act {
+    margin-top: 2rem;
+}
+
+/* Styling for each section */
+.akn-section {
+    margin-bottom: 2rem;
+}
+
+.akn-section h3 {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    color: #111827;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+}
+
+/* General paragraph styling within the document */
+.akn-p {
+    display: block; 
+    text-align: justify;
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+
+/* Styling for numbered/lettered paragraphs */
+.akn-paragraph {
+    display: flex;
+    margin-bottom: 1rem;
+}
+
+.akn-num {
+    font-weight: bold;
+    margin-right: 1rem;
+    color: #374151;
+}
+
+/* Styling for subparagraphs to ensure correct indentation and layout */
+.akn-subparagraph {
+    display: flex; /* Align the number (i) and its content */
+    padding-left: 2rem; /* Indent the entire subparagraph */
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+/* Adjust the parent paragraph if it contains subparagraphs */
+.akn-paragraph:has(.akn-subparagraph) {
+    flex-wrap: wrap; /* Allow content to wrap to the next line */
+}
+
+.akn-paragraph:has(.akn-subparagraph) > .akn-num {
+    flex-basis: 100%; /* Make the main number (e.g., (b)) take its own line */
+}
+
+
+/* For remarks and editorial notes */
+.akn-remark {
+    font-style: italic;
+    color: #4b5563;
+    font-size: 0.95rem;
+    display: block;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: #f9fafb;
+    border-left: 3px solid #d1d5db;
+}
+
+/* Styling for all anchor tags within the document view */
+.document-view a {
+    color: #0056b3; /* A standard, accessible blue for links */
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.document-view a:hover {
+    color: #003d80; /* A darker blue on hover */
+}
+
+/* Specifically target the section number links to give them the link color */
+.akn-section h3 a {
+    text-decoration: none; /* Remove underline from section headings */
+    color: #0056b3;
+}
+
+/* --- NEW --- Styles for the section display page header */
+.section-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 1.5rem;
+}
+
+.page-type-heading {
+    font-size: 1.2rem;
+    font-weight: normal;
+    color: #0056b3; /* Blue color like the example */
+    margin: 0 0 0.5rem 0;
+    font-family: 'Inter', sans-serif; /* A cleaner sans-serif font for this heading */
+}
+
+.full-title-heading {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #111827;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Wrapper for the actual content to separate it from the header */
+.section-content-wrapper {
+    margin-top: 1.5rem;
+}

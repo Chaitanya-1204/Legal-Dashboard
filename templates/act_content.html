@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<!-- Link to the new custom stylesheet. -->
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/custom_act_style.css') }}">
+
+<!-- No page header is needed here as the title is part of the content itself -->
+
+<!-- This container will be styled by our new CSS file -->
+<div class="document-view">
+    {{ content|safe }}
+</div>
+{% endblock %}

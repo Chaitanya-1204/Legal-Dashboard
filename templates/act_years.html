@@ -8,10 +8,9 @@
     <p>Please select a year to view the act details.</p>
 </div>
 
-<!-- Year Cards Section -->
 <div class="year-grid">
     {% for year in years %}
-    <a href="/acts/{{ law_type }}/{{ law_name }}/{{ year }}" class="year-card-link">
+    <a href="/acts/{{ law_name_folder }}/{{ year }}" class="year-card-link">
         <div class="year-card">
             {{ year }}
         </div>

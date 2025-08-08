@@ -1,10 +1,181 @@
 from flask import Flask, render_template
 import datetime
+import pandas as pd
+import os
+import ast
+from bs4 import BeautifulSoup
+import re
 
 # Initialize the Flask application
 app = Flask(__name__)
 
 # --- Data for the App ---
+
+# Define the root path for your data files
+DATA_ROOT = "/DATACHAI/Data/DATA/laws"
+
+# Construct the path to the CSV file
+csv_file_path = os.path.join('csv_files', 'categories_and_folders.csv')
+doc_links_csv_path = os.path.join('csv_files', 'doc_links.csv')
+
+
+# Read the CSV file into a DataFrame
+try:
+    categories_df = pd.read_csv(csv_file_path)
+    doc_links_df = pd.read_csv(doc_links_csv_path)
+    
+    # Define the desired order for the law types
+    law_type_order = ['Central Acts', 'State Acts', 'British India']
+    
+    # Convert the 'law_type' column to a special 'Categorical' type.
+    categories_df['law_type'] = pd.Categorical(categories_df['law_type'], categories=law_type_order, ordered=True)
+    
+    # Sort the DataFrame first by our custom law_type order, 
+    # and then alphabetically by the category_name within each type.
+    categories_df = categories_df.sort_values(by=['law_type', 'category_name'])
+
+except FileNotFoundError as e:
+    print(f"Error: {e}")
+    categories_df = pd.DataFrame(columns=['category_name', 'folder_name', 'years_available', 'law_type'])
+    doc_links_df = pd.DataFrame(columns=['doc_id', 'parent_doc_id', 'doc_type', 'path'])
+
+
+# --- Routes ---
+
+@app.route('/')
+def index():
+    """Renders the main dashboard page."""
+    return render_template('index.html', active_page='home')
+
+@app.route('/stats')
+def stats():
+    """Renders the placeholder page for Statistics."""
+    return render_template('placeholder.html', title="Statistics", active_page='stats')
+
+
+# --- Acts Routes ---
+@app.route('/acts')
+def acts():
+    """Renders the main selection page for Acts, categorized."""
+    acts_by_law_type = categories_df.groupby('law_type', sort=False)
+    return render_template('acts.html', acts_by_law_type=acts_by_law_type, active_page='home')
+
+@app.route('/acts/<law_name_folder>')
+def act_years(law_name_folder):
+    """Renders the year selection page for a specific act."""
+    law_details = categories_df.loc[categories_df['folder_name'] == law_name_folder].iloc[0]
+    years_str = law_details['years_available']
+    law_type = law_details['law_type']
+    
+    try:
+        years = ast.literal_eval(years_str)
+    except (ValueError, SyntaxError):
+        years = []
+
+    return render_template('act_years.html', law_type=law_type, law_name=law_details['category_name'], law_name_folder=law_name_folder, years=years, active_page='home')
+
+@app.route('/acts/<law_name_folder>/<int:year>')
+def act_year_details(law_name_folder, year):
+    """Lists all the HTML files for a given act and year."""
+    law_details = categories_df.loc[categories_df['folder_name'] == law_name_folder].iloc[0]
+    year_path = os.path.join(DATA_ROOT, law_name_folder, str(year))
+    
+    try:
+        files = [f for f in os.listdir(year_path) if f.endswith('.html')]
+    except FileNotFoundError:
+        files = []
+
+    return render_template('act_files.html', law_name=law_details['category_name'], year=year, law_name_folder=law_name_folder, files=files)
+
+@app.route('/acts/<law_name_folder>/<int:year>/<filename>')
+def act_file_content(law_name_folder, year, filename):
+    """Displays the content of a specific act's HTML file."""
+    full_path = os.path.join(DATA_ROOT, law_name_folder, str(year), filename)
+    
+    try:
+        with open(full_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Remove square brackets from the content
+        content = content.replace('[', '').replace(']', '')
+    except FileNotFoundError:
+        content = "File not found."
+    except Exception as e:
+        content = f"An error occurred: {e}"
+
+    # We can extract a title from the filename
+    title = os.path.basename(filename)
+    return render_template('act_content.html', title=title, content=content)
+
+# --- MODIFIED ROUTE for handling internal doc links ---
+@app.route('/doc/<int:doc_id>/')
+def show_doc_section(doc_id):
+    """
+    Finds a specific doc ID, extracts the parent section of that link,
+    and displays it with a contextual title.
+    """
+    try:
+        # Find the row in the doc_links DataFrame that matches the doc_id
+        link_info = doc_links_df[doc_links_df['doc_id'] == doc_id].iloc[0]
+        file_path = link_info['path']
+        
+        # Get the main act's title from the categories dataframe
+        try:
+            parent_folder_name = os.path.basename(os.path.dirname(os.path.dirname(file_path)))
+            act_title = categories_df[categories_df['folder_name'] == parent_folder_name]['category_name'].iloc[0]
+        except Exception:
+            act_title = "the Act" # Fallback title
+
+        with open(file_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+
+        soup = BeautifulSoup(html_content, 'html.parser')
+        anchor_tag = soup.find('a', href=re.compile(f'^/doc/{doc_id}/?$'))
+        
+        content_to_display = ""
+        page_type = "Section"
+        full_title = f"Details for Doc ID {doc_id}"
+
+        if anchor_tag:
+            parent_section = anchor_tag.find_parent('section')
+            
+            if parent_section:
+                section_id = parent_section.get('id', '') # e.g., 'section_6.b'
+                id_parts = []
+                if section_id.startswith('section_'):
+                    id_parts = section_id.replace('section_', '').split('.')
+
+                # Construct title based on ID parts
+                if len(id_parts) > 0:
+                    main_num = id_parts[0]
+                    sub_num = f"({id_parts[1]})" if len(id_parts) > 1 else ""
+                    
+                    if "Constitution" in act_title:
+                        page_type = "Constitution Article" if not sub_num else "Constitution Sub-article"
+                        full_title = f"Article {main_num}{sub_num} in {act_title}"
+                    else:
+                        page_type = "Act Section" if not sub_num else "Act Sub-section"
+                        full_title = f"Section {main_num}{sub_num} in {act_title}"
+                
+                # Get the content to display
+                content_to_display = str(parent_section).replace('[', '').replace(']', '')
+            else:
+                # Fallback if no parent section is found
+                parent_content = anchor_tag.parent
+                content_to_display = str(parent_content).replace('[', '').replace(']', '')
+        else:
+            content_to_display = f"<p>Error: Could not find the link for doc id {doc_id} in the file.</p>"
+
+    except IndexError:
+        content_to_display = f"<p>Error: No information found for doc id {doc_id}.</p>"
+    except FileNotFoundError:
+        content_to_display = f"<p>Error: The file specified for doc id {doc_id} could not be found.</p>"
+    except Exception as e:
+        content_to_display = f"<p>An unexpected error occurred: {e}</p>"
+
+    # Use a new template for this view
+    return render_template('section_display.html', page_type=page_type, full_title=full_title, content=content_to_display)
+
 
 # List of High Courts
 high_courts_list = [
@@ -29,47 +200,11 @@ tribunals_list = [
     "Trademark Tribunal", "Custom, Excise & Service Tax Tribunal", "National Company Law Appellate Tribunal"
 ]
 
-# Data for Acts, categorized
-acts_data = {
-    "Central Laws": [
-        "Union of India - Act", "International Treaty - Act", "Constitution and Amendments", "United Nations Conventions"
-    ],
-    "State Laws": [
-        "State of Andhra Pradesh - Act", "State of Arunachal Pradesh - Act", "State of Assam - Act", "State of Bihar - Act",
-        "UT Chandigarh - Act", "State of Goa - Act", "NCT Delhi - Act", "State of Gujarat - Act", "State of Haryana - Act",
-        "State of Himachal Pradesh - Act", "State of Jammu-Kashmir - Act", "State of Jharkhand - Act", "State of Karnataka - Act",
-        "State of Kerala - Act", "State of Madhya Bharat - Act", "State of Madhya Pradesh - Act", "State of Maharashtra - Act",
-        "State of Manipur - Act", "State of Meghalaya - Act", "State of Mizoram - Act", "State of Nagaland - Act",
-        "State of Odisha - Act", "State of Puducherry - Act", "State of Punjab - Act", "State of Rajasthan - Act",
-        "State of Sikkim - Act", "State of Tamilnadu- Act", "State of Telangana - Act", "State of Tripura - Act",
-        "State of Uttarakhand - Act", "State of Uttar Pradesh - Act", "State of West Bengal - Act", "Lakshadweep - Act",
-        "Andaman and Nicobar Islands - Act", "Greater Bengaluru City Corporation - Act", "UT Ladakh - Act",
-        "Daman and Diu - Act", "Dadra And Nagar Haveli - Act"
-    ],
-    "British India (Historical)": [
-        "British India - Act", "Bhopal State - Act", "Bombay Presidency - Act", "Madras Presidency - Act",
-        "Central Provinces And Berar - Act", "Bengal Presidency - Act", "Chota Nagpur Division - Act", "Mysore State - Act",
-        "Nagpur Province - Act", "Punjab Province - Act", "United Province - Act", "Vindhya Province - Act"
-    ]
-}
-
 # List of District Courts
 district_courts_list = [
     "Bangalore District Court", "Delhi District Court"
 ]
 
-
-# --- Routes ---
-
-@app.route('/')
-def index():
-    """Renders the main dashboard page."""
-    return render_template('index.html', active_page='home')
-
-@app.route('/stats')
-def stats():
-    """Renders the placeholder page for Statistics."""
-    return render_template('placeholder.html', title="Statistics", active_page='stats')
 
 # --- Supreme Court Routes ---
 @app.route('/supreme')
@@ -114,25 +249,6 @@ def tribunal_judgments(tribunal_name):
 @app.route('/tribunals/<tribunal_name>/<int:year>')
 def tribunal_year_judgments(tribunal_name, year):
     return render_template('placeholder.html', title=f"{tribunal_name} - {year} Judgments")
-
-# --- Acts Routes ---
-@app.route('/acts')
-def acts():
-    """Renders the main selection page for Acts, categorized."""
-    return render_template('acts.html', acts_data=acts_data, active_page='home')
-
-@app.route('/acts/<law_type>/<law_name>')
-def act_years(law_type, law_name):
-    """Renders the year selection page for a specific act."""
-    current_year = datetime.datetime.now().year
-    end_year = max(current_year, 2025)
-    years = range(1950, end_year + 1)
-    return render_template('act_years.html', law_type=law_type, law_name=law_name, years=years, active_page='home')
-
-@app.route('/acts/<law_type>/<law_name>/<int:year>')
-def act_year_details(law_type, law_name, year):
-    """Renders a placeholder for a specific act and year."""
-    return render_template('placeholder.html', title=f"{law_name} ({law_type}) - {year}")
 
 # --- District Court Routes ---
 @app.route('/district-courts')
