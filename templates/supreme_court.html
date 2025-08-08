@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Supreme Court Judgments - Select Year{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Supreme Court Judgments</h1>
+    <p>Please select a year to view the judgments.</p>
+</div>
+
+<!-- Year Cards Section -->
+<div class="year-grid">
+    {% for year in years %}
+    <a href="/supreme/{{ year }}" class="year-card-link">
+        <div class="year-card">
+            {{ year }}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

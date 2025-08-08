@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}District Courts - Select Court{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>District Courts</h1>
+    <p>Please select a District Court to view its judgments.</p>
+</div>
+
+<!-- District Courts Card Grid -->
+<div class="court-grid">
+    {% for court in courts %}
+    <a href="/district-courts/{{ court }}" class="court-card-link">
+        <div class="court-card">
+            <i class="fas fa-building-columns court-icon"></i>
+            <span class="court-name">{{ court }}</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}High Courts - Select Court{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>High Courts</h1>
+    <p>Please select a High Court to view its judgments.</p>
+</div>
+
+<!-- High Courts Card Grid -->
+<div class="court-grid">
+    {% for court in courts %}
+    <a href="/highcourt/{{ court }}" class="court-card-link">
+        <div class="court-card">
+            <i class="fas fa-landmark court-icon"></i>
+            <span class="court-name">{{ court }}</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

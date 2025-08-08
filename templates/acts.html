@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Acts{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Browse Laws</h1>
+    <p>Select a law to view its details.</p>
+</div>
+
+<div class="acts-container">
+    {% for category, laws in acts_data.items() %}
+    <section class="act-category">
+        <h2 class="category-title">{{ category }}</h2>
+        <!-- Using the same 'court-grid' class for a consistent card layout -->
+        <div class="court-grid">
+            {% for law in laws %}
+            <a href="/acts/{{ category }}/{{ law }}" class="court-card-link">
+                <div class="court-card">
+                    <!-- Using a generic scroll icon for acts -->
+                    <i class="fas fa-scroll court-icon"></i>
+                    <span class="court-name">{{ law }}</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+</div>
+{% endblock %}

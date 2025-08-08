@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Legal Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Welcome to the Legal Dashboard</h1>
+    <p>Your one-stop portal for legal information and resources.</p>
+</div>
+
+<!-- Cards Section -->
+<div class="card-grid">
+    
+    <!-- Acts Card -->
+    <a href="/acts" class="card-link">
+        <div class="card">
+            <div class="card-icon icon-red">
+                <i class="fas fa-scroll"></i>
+            </div>
+            <h3 class="card-title">Acts</h3>
+            <p class="card-description">Find and read various central and state government acts.</p>
+        </div>
+    </a>
+
+    <!-- Supreme Court Judgments Card -->
+
+    <a href="/supreme" class="card-link">
+        <div class="card">
+            <div class="card-icon icon-blue">
+                <i class="fas fa-gavel"></i>
+            </div>
+            <h3 class="card-title">Supreme Court Judgments</h3>
+            <p class="card-description">Access the latest judgments from the Supreme Court of India.</p>
+        </div>
+    </a>
+
+    <!-- High Court Judgments Card -->
+    <a href="/highcourt" class="card-link">
+        <div class="card">
+            <div class="card-icon icon-green">
+                <i class="fas fa-landmark"></i>
+            </div>
+            <h3 class="card-title">High Court Judgments</h3>
+            <p class="card-description">Browse through judgments from various High Courts across the country.</p>
+        </div>
+    </a>
+
+    <!-- District Courts Card -->
+    <a href="/district-courts" class="card-link">
+        <div class="card">
+            <div class="card-icon icon-teal">
+                <i class="fas fa-building-columns"></i>
+            </div>
+            <h3 class="card-title">District Courts</h3>
+            <p class="card-description">Explore judgments from major district courts.</p>
+        </div>
+    </a>
+
+    
+
+     <!-- Tribunals Card -->
+    <a href="/tribunals" class="card-link">
+        <div class="card">
+            <div class="card-icon icon-indigo">
+                <i class="fas fa-users"></i>
+            </div>
+            <h3 class="card-title">Tribunals</h3>
+            <p class="card-description">Access orders and information from various tribunals.</p>
+        </div>
+    </a>
+
+    
+    <!-- Blogs Card -->
+    <a href="/blogs" class="card-link">
+        <div class="card">
+            <div class="card-icon icon-yellow">
+                <i class="fas fa-blog"></i>
+            </div>
+            <h3 class="card-title">Blogs</h3>
+            <p class="card-description">Read insightful articles and blogs from legal experts.</p>
+        </div>
+    </a>
+
+    <!-- Books Card -->
+    <a href="/books" class="card-link">
+        <div class="card">
+            <div class="card-icon icon-purple">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <h3 class="card-title">Books</h3>
+            <p class="card-description">Explore a library of legal books and publications.</p>
+        </div>
+    </a>
+
+   
+
+    
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tribunal_name }} - Select Year{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ tribunal_name }}</h1>
+    <p>Please select a year to view the judgments.</p>
+</div>
+
+<!-- Year Cards Section -->
+<div class="year-grid">
+    {% for year in years %}
+    <a href="/tribunals/{{ tribunal_name }}/{{ year }}" class="year-card-link">
+        <div class="year-card">
+            {{ year }}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,312 @@
+/* General body styling */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* Container to center content and provide padding */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+/* Navigation Bar */
+.navbar {
+    background-color: #ffffff;
+    padding: 1rem 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.navbar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.navbar-brand i {
+    font-size: 1.75rem;
+    color: #2563eb;
+    margin-right: 0.75rem;
+}
+
+.navbar-brand-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+/* Nav Links Styling */
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2rem; /* Space between nav links */
+}
+
+.nav-link {
+    text-decoration: none;
+    color: #4b5563; /* Gray text */
+    font-weight: 500;
+    font-size: 1rem;
+    padding: 0.5rem 0;
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #111827; /* Darker on hover */
+}
+
+/* Style for the active link */
+.nav-link.active {
+    color: #2563eb; /* Blue for active page */
+    font-weight: 600;
+}
+
+/* Underline effect for active link */
+.nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #2563eb;
+}
+
+
+/* Main Content Area */
+main {
+    padding: 2.5rem 0;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.page-header p {
+    font-size: 1.125rem;
+    color: #4b5563;
+    margin-top: 0.5rem;
+}
+
+/* Cards Section: Responsive Grid */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2.5rem;
+}
+
+.card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+}
+
+.card {
+    background-color: #ffffff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.08);
+}
+
+.card-icon {
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.card-icon i {
+    font-size: 2.25rem;
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.card-description {
+    font-size: 0.95rem;
+    color: #6b7280;
+}
+
+/* Color variations for icons */
+.icon-blue { background-color: #dbeafe; color: #2563eb; }
+.icon-green { background-color: #d1fae5; color: #059669; }
+.icon-red { background-color: #fee2e2; color: #dc2626; }
+.icon-yellow { background-color: #fef3c7; color: #d97706; }
+.icon-purple { background-color: #f3e8ff; color: #9333ea; }
+.icon-indigo { background-color: #e0e7ff; color: #4f46e5; }
+.icon-teal { background-color: #ccfbf1; color: #0d9488; }
+
+
+/* --- STYLES FOR YEAR CARDS --- */
+.year-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1.5rem;
+}
+
+.year-card-link {
+    text-decoration: none;
+}
+
+.year-card {
+    background-color: #ffffff;
+    padding: 1.5rem 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+    text-align: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #374151;
+    transition: all 0.3s ease;
+    border: 1px solid #e5e7eb;
+}
+
+.year-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.08);
+    background-color: #2563eb;
+    color: #ffffff;
+    border-color: #1d4ed8;
+}
+
+/* --- STYLES FOR HIGH COURT, TRIBUNAL, & ACTS CARDS --- */
+.court-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    grid-auto-rows: 1fr;
+}
+
+.court-card-link {
+    text-decoration: none;
+    display: flex;
+    height: 100%;
+}
+
+.court-card {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.court-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.08);
+    background-color: #2563eb;
+    border-color: #1d4ed8;
+}
+
+.court-card .court-icon {
+    font-size: 1.75rem;
+    color: #6b7280;
+    transition: color 0.3s ease;
+}
+
+.court-card:hover .court-icon {
+    color: #ffffff;
+}
+
+.court-card .court-name {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1f2937;
+    transition: color 0.3s ease;
+}
+
+.court-card:hover .court-name {
+    color: #ffffff;
+}
+
+/* --- STYLES FOR ACTS PAGE CATEGORIES --- */
+.acts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+.act-category .category-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+/* Placeholder Page Styling */
+.placeholder-content {
+    text-align: center;
+    padding: 4rem 1rem;
+}
+
+.placeholder-content h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.placeholder-content p {
+    font-size: 1.125rem;
+    color: #4b5563;
+    margin-top: 1rem;
+}
+
+.btn-home {
+    display: inline-block;
+    margin-top: 2rem;
+    background-color: #2563eb;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 0.8rem 1.6rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+}
+
+.btn-home:hover {
+    background-color: #1d4ed8;
+}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Tribunals - Select Tribunal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Tribunals</h1>
+    <p>Please select a Tribunal to view its judgments.</p>
+</div>
+
+<!-- Tribunals Card Grid -->
+<div class="court-grid">
+    {% for tribunal in tribunals %}
+    <a href="/tribunals/{{ tribunal }}" class="court-card-link">
+        <div class="court-card">
+            <i class="fas fa-gavel court-icon"></i>
+            <span class="court-name">{{ tribunal }}</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}
