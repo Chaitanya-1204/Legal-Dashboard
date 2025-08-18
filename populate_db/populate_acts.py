@@ -131,19 +131,21 @@ def populate_acts_collection():
             
             for row in csv_reader:
                 try:
-                    doc_id = row['doc_id']
+                    # Keep year as a string for path construction
+                    doc_id_str = row['doc_id']
+                    year_str = row['year']
+                    
                     full_title = row['full_title']
                     category = row['category']
-                    year = row['year']
                     category_folder = row['category_folder']
                     filename = row['filename']
 
-                    # Get the law_type from our mapping, with a default fallback
                     law_type = law_type_map.get(category, "Uncategorized")
                     if law_type == "Uncategorized":
                         log_issue("Missing Law Type", f"Category '{category}' not found in law_types.csv.")
 
-                    html_file_path = os.path.join(MAIN_DOCUMENTS_FOLDER, category_folder, year, filename)
+                    # Use the string version of year for the path
+                    html_file_path = os.path.join(MAIN_DOCUMENTS_FOLDER, category_folder, year_str, filename)
 
                     try:
                         with open(html_file_path, 'r', encoding='utf-8') as html_file:
@@ -161,11 +163,12 @@ def populate_acts_collection():
                     word_count = calculate_word_count(html_content)
 
                     document_to_insert = {
-                        'doc_id': doc_id,
+                        # Convert to integers just before inserting into the database
+                        'doc_id': int(doc_id_str),
                         'full_title': full_title,
                         'category': category,
-                        'year': int(year),
-                        'law_type': law_type, # Use the dynamically looked-up law type
+                        'year': int(year_str),
+                        'law_type': law_type,
                         'word_count': word_count,
                         'content': html_content
                     }
@@ -173,11 +176,12 @@ def populate_acts_collection():
                     acts_collection.insert_one(document_to_insert)
                     inserted_filenames.add(filename)
                     successful_inserts += 1
-                    print(f"   -> Inserted doc_id: {doc_id} (Type: {law_type}, Words: {word_count})")
+                    print(f"   -> Inserted doc_id: {doc_id_str} (Type: {law_type}, Words: {word_count})")
 
                 except KeyError as e:
                     print(f"   ❌ Error: Missing expected column in CSV: {e}. Please check CSV headers.")
                     continue
+
 
     except FileNotFoundError:
         print(f"❌ Critical Error: Metadata file not found at '{METADATA_CSV_PATH}'.")
