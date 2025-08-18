@@ -11,10 +11,10 @@ acts_bp = Blueprint('acts', __name__, template_folder='../templates')
 @acts_bp.route('/')
 def show_categories():
     """
-    Displays act categories grouped by their law_type (e.g., Central Acts, State Acts).
+    Displays act categories grouped by their law_type, with a custom sort order.
     """
     try:
-        # This is a MongoDB Aggregation Pipeline. It's a powerful way to process data.
+        # This MongoDB Aggregation Pipeline processes data to achieve the desired grouping and sorting.
         pipeline = [
             {
                 # Stage 1: Group all documents by the 'law_type' field.
@@ -25,16 +25,37 @@ def show_categories():
                 }
             },
             {
-                # Stage 2: Sort the groups by their name (e.g., Central, State).
-                "$sort": {"_id": 1}
+                # Stage 2: Add a temporary field to define a custom sort order.
+                # Lower numbers will appear first.
+                "$addFields": {
+                    "sortOrder": {
+                        "$switch": {
+                            "branches": [
+                                # Assign 1 to 'Central Acts' to make it appear first.
+                                {"case": {"$eq": ["$_id", "Central Acts"]}, "then": 1},
+                                # Assign 2 to 'State Acts' to make it appear second.
+                                {"case": {"$eq": ["$_id", "State Acts"]}, "then": 2},
+                                # Assign 3 to any law type containing "British" for third position.
+                                {"case": {"$regexMatch": {"input": "$_id", "regex": "British India"}}, "then": 3}
+                            ],
+                            # All other law types will get a default order of 4.
+                            "default": 4 
+                        }
+                    }
+                }
+            },
+            {
+                # Stage 3: Sort the groups first by our custom 'sortOrder' field,
+                # and then alphabetically by name for any ties.
+                "$sort": {
+                    "sortOrder": 1,
+                    "_id": 1
+                }
             }
         ]
         # Execute the pipeline and convert the result to a list.
         grouped_categories = list(db.acts.aggregate(pipeline))
         
-        # The result is a list of dictionaries, like:
-        # [{'id': 'Central Acts', 'categories': [...]}, {'id': 'State Acts', 'categories': [...]}]
-
         # As a final touch, sort the categories alphabetically within each group.
         for group in grouped_categories:
             group['categories'].sort()
@@ -72,7 +93,7 @@ def list_acts_by_year(category_name, year):
     try:
         acts = list(db.acts.find(
             {"category": category_name, "year": year},
-            {'title': 1, 'doc_id': 1, '_id': 0}
+            {'full_title': 1, 'doc_id': 1, '_id': 0}
         ))
         if not acts:
             abort(404)

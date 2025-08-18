@@ -286,3 +286,57 @@ body {
     text-decoration: underline;
 }
 
+/* --- STYLES FOR ACTS LIST PAGE --- */
+.act-grid {
+    display: grid;
+    /* Creates a 1-column grid on small screens, and 3 on larger screens */
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1.5rem; /* Space between cards */
+}
+
+/* Medium screens (tablets) */
+@media (min-width: 768px) {
+    .act-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Large screens (desktops) */
+@media (min-width: 1024px) {
+    .act-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+.act-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Vertically center content */
+    align-items: center; /* Horizontally center content */
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    padding: 1.5rem;
+    text-align: center; /* Center the text */
+    color: #374151;
+    text-decoration: none;
+    transition: all 0.2s ease-in-out;
+    border-top: 4px solid #e5e7eb;
+}
+
+.act-card:hover {
+    border-color: #d1d5db;
+    border-top-color: #3b82f6;
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.07);
+}
+
+/* Style for the new icon */
+.act-card-icon {
+    font-size: 2rem; /* Make the icon larger */
+    color: #3b82f6; /* Blue icon color */
+    margin-bottom: 1rem; /* Space between icon and title */
+}
+
+.act-card .text-lg {
+    color: #1f2937;
+}
