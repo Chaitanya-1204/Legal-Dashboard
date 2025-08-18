@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- The title will be dynamically set by each page that extends this template -->
+    <title>{% block title %}Legal Dashboard{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <!-- Link to your custom CSS file -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Header and Navbar -->
+    <header class="bg-white sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="{{ url_for('home') }}" class="flex items-center space-x-3">
+                <i class="fas fa-balance-scale text-3xl text-blue-600"></i>
+                <span class="text-2xl font-bold text-gray-900">Legal Dashboard</span>
+            </a>
+            <div class="flex items-center space-x-8">
+                <a href="{{ url_for('home') }}" class="text-gray-700 hover:text-blue-600 font-medium">Home</a>
+                <a href="#" class="text-gray-700 hover:text-blue-600 font-medium">Contact Us</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content Block -->
+    <!-- This is where the content of each individual page will be injected. -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white mt-12 border-t">
+        <div class="container mx-auto px-6 py-6 text-center text-gray-600">
+            &copy; 2025 Legal Dashboard. All Rights Reserved.
+        </div>
+    </footer>
+
+    <!-- Modal for "Under Construction" message (can be used by any page) -->
+    <div id="constructionModal" class="modal">
+        <div class="modal-content bg-white p-8 rounded-lg shadow-2xl max-w-sm w-full text-center">
+            <h2 class="text-2xl font-bold mb-4">Coming Soon!</h2>
+            <p class="text-gray-700 mb-6">This section is currently under construction. Please check back later.</p>
+            <button id="closeModal" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors">Close</button>
+        </div>
+    </div>
+
+    <!-- Any page-specific scripts can be added here -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

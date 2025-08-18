@@ -1,0 +1,23 @@
+<!-- This page now inherits from base.html -->
+{% extends "base.html" %}
+
+<!-- Set the title for this specific page -->
+{% block title %}Home - Legal Dashboard{% endblock %}
+
+<!-- This is the main content that will be injected into base.html -->
+{% block content %}
+<div class="container mx-auto px-6 py-12 text-center">
+    <h1 class="text-4xl font-bold text-gray-900">Welcome to the Legal Dashboard</h1>
+    <p class="text-gray-600 mt-2 text-lg">Your one-stop portal for legal information and resources.</p>
+
+    <!-- The card grid will be populated by script.js -->
+    <div id="card-grid" class="card-grid-container mt-12">
+        <!-- JavaScript will generate cards here -->
+    </div>
+</div>
+{% endblock %}
+
+<!-- Add the script.js file specifically for this page -->
+{% block scripts %}
+<script src="{{ url_for('static', filename='script.js') }}" defer></script>
+{% endblock %}

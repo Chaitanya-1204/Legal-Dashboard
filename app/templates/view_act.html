@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{{ act.title }} - Legal Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 md:px-6 py-10">
+    <!-- Breadcrumb Navigation -->
+    <div class="mb-6 text-sm text-gray-500">
+         <a href="{{ url_for('acts.show_categories') }}" class="hover:underline">Categories</a> &gt;
+         <a href="{{ url_for('acts.show_years', category_name=act.category) }}" class="hover:underline">{{ act.category }}</a> &gt;
+         <a href="{{ url_for('acts.list_acts_by_year', category_name=act.category, year=act.year) }}" class="hover:underline">{{ act.year }}</a>
+    </div>
+
+    <div class="bg-white p-6 md:p-8 rounded-lg shadow-md">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-900 border-b pb-4 mb-4">{{ act.title }}</h1>
+        <div class="text-gray-600 mb-6 text-sm">
+            <span class="font-semibold">Year:</span> {{ act.year }} | 
+            <span class="font-semibold">Category:</span> {{ act.category }} |
+            <span class="font-semibold">Law Type:</span> {{ act.law_type }}
+        </div>
+        
+        <div class="act-content">
+            {{ act.content | safe }}
+        </div>
+    </div>
+</div>
+{% endblock %}

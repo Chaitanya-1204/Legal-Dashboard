@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Years for {{ category_name }} - Legal Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 md:px-6 py-10">
+    <!-- Breadcrumb Navigation -->
+    <div class="mb-6 text-sm text-gray-500">
+        <a href="{{ url_for('acts.show_categories') }}" class="text-blue-600 hover:underline">Categories</a>
+        <span class="mx-2">&gt;</span>
+        <span class="font-semibold text-gray-700">{{ category_name }}</span>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-900 mb-1">Select a Year</h1>
+    <h2 class="text-lg text-gray-600 mb-8">{{ category_name }}</h2>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+        {% for year in years %}
+        <a href="{{ url_for('acts.list_acts_by_year', category_name=category_name, year=year) }}"
+           class="block text-center bg-white border border-gray-300 rounded-md p-5 shadow-sm hover:shadow-md hover:border-blue-500 transition duration-150 text-lg font-semibold text-gray-800">
+            {{ year }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

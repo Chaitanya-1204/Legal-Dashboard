@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Acts for {{ year }} - Legal Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 md:px-6 py-10">
+    <!-- Breadcrumb Navigation -->
+    <div class="mb-8 text-sm text-gray-500">
+        <a href="{{ url_for('acts.show_categories') }}" class="hover:underline">Categories</a> &gt;
+        <a href="{{ url_for('acts.show_years', category_name=category_name) }}" class="hover:underline">{{ category_name }}</a> &gt;
+        <span class="font-semibold">{{ year }}</span>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Acts from {{ year }}</h1>
+    <div class="bg-white p-6 md:p-8 rounded-lg shadow-md">
+        <ul class="divide-y divide-gray-200">
+            {% for act in acts %}
+            <li class="py-4">
+                <a href="{{ url_for('acts.view_act', doc_id=act.doc_id) }}" class="block hover:bg-gray-50 p-3 rounded-md transition-colors">
+                    <h2 class="text-lg font-semibold text-gray-800">{{ act.title }}</h2>
+                </a>
+            </li>
+            {% else %}
+            <li class="py-4 text-center text-gray-500">No acts found for this year and category.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}
