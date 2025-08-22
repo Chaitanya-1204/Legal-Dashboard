@@ -5,7 +5,6 @@
 {% block content %}
 <div class="container mx-auto px-4 md:px-6 py-10">
     
-
     <div class="bg-white p-6 md:p-8 rounded-lg shadow-md">
         <h1 class="text-2xl md:text-3xl font-bold text-gray-900 border-b pb-4 mb-4">{{ act.title }}</h1>
         <div class="text-gray-600 mb-6 text-sm">
@@ -19,4 +18,59 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- FIX for /doc/ links causing 404 errors ---
+    const contentArea = document.querySelector('.act-content');
+    if (contentArea) {
+        contentArea.addEventListener('click', function(event) {
+            const anchor = event.target.closest('a');
+            if (anchor && anchor.href.includes('/doc/')) {
+                event.preventDefault();
+                const match = anchor.href.match(/\/doc\/(\d+)/);
+                if (match && match[1]) {
+                    const docId = match[1];
+                    window.location.href = `/acts/view/${docId}`;
+                }
+            }
+        });
+    }
+    // --- END FIX ---
+
+    // 1. Check if the URL has a 'highlight' query parameter.
+    const urlParams = new URLSearchParams(window.location.search);
+    const highlightId = urlParams.get('highlight');
+
+    if (highlightId) {
+        // 2. Find the anchor tag that links to the document we want to highlight.
+        // The selector looks for an <a> tag whose href attribute contains '/doc/[highlightId]'.
+        // Using contains (*) instead of ends with ($) for more flexibility.
+        const targetElement = document.querySelector(`a[href*='/doc/${highlightId}']`);
+
+        if (targetElement) {
+            // 3. Find the closest parent element that represents a "section" to highlight.
+            const sectionToHighlight = targetElement.closest('.akn-p, .akn-section, .akn-subsection, .akn-paragraph');
+            
+            if (sectionToHighlight) {
+                // 4. Scroll the element into view.
+                sectionToHighlight.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+
+                // 5. Apply the highlight class.
+                sectionToHighlight.classList.add('highlight-section');
+
+                // 6. (Optional) Remove the highlight after a few seconds.
+                setTimeout(() => {
+                    sectionToHighlight.classList.remove('highlight-section');
+                }, 3000); 
+            }
+        }
+    }
+});
+</script>
 {% endblock %}

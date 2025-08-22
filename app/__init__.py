@@ -31,16 +31,19 @@ def create_app():
         
         # Import the 'acts_bp' blueprint from our acts routes file.
         from .acts import routes as acts_routes
-        
-        # Register the blueprint. All routes defined in acts_bp will now
-        # be active in the application, prefixed with '/acts'.
         app.register_blueprint(acts_routes.acts_bp, url_prefix='/acts')
 
-        # --- Main Route for the Homepage ---
-        # This route is part of the main app, not a blueprint.
+       
+        from .judgments.routes import judgments_bp
+        app.register_blueprint(judgments_bp, url_prefix="/sc")
+
+        from .tribunals import routes as tribunals_routes
+        app.register_blueprint(tribunals_routes.tribunals_bp, url_prefix='/tribunals')
+
         @app.route('/')
         def home():
             """Renders the main homepage."""
             return render_template('index.html')
+        
 
     return app

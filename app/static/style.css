@@ -23,7 +23,7 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1rem;
-    grid-auto-rows: 1fr; 
+    grid-auto-rows: 1fr;
 }
 
 .category-card {
@@ -258,19 +258,6 @@ body {
     margin-bottom: 0.5rem;
 }
 
-.akn-p {
-    display: block;
-    margin-bottom: 0.75rem;
-    color: #374151; /* gray-700 */
-}
-
-/* Subsections & paragraphs */
-.akn-subsection,
-.akn-paragraph {
-    margin-left: 1rem;
-    margin-top: 0.5rem;
-}
-
 .akn-num {
     font-weight: 600;
     color: #111827;
@@ -339,4 +326,157 @@ body {
 
 .act-card .text-lg {
     color: #1f2937;
+}
+
+/* --- NEW --- Style for highlighting a linked section --- */
+.highlight-section {
+    background-color: #fef9c3; /* A light, non-intrusive yellow */
+    border-left: 4px solid #f59e0b; /* An amber color for the border */
+    border-radius: 4px;
+    padding: 0.5rem;
+    margin: -0.5rem; /* Offset the padding to keep layout consistent */
+    transition: background-color 2s ease-in-out; /* Smooth fade out */
+}
+
+/* --- NER HIGHLIGHTS (OpenNyAI) --- */
+.ner { padding: 0 .18em; border-radius: .25rem; box-decoration-break: clone; }
+.ner-COURT { background: rgba(0, 150, 255, .22); }
+.ner-PETITIONER, .ner-RESPONDENT, .ner-JUDGE, .ner-WITNESS, .ner-OTHER_PERSON { background: rgba(255, 200, 0, .25); }
+.ner-STATUTE { background: rgba(160, 110, 255, .22); }
+.ner-PROVISION { background: rgba(255, 100, 150, .22); }
+.ner-PRECEDENT, .ner-CASE_NUMBER { background: rgba(0, 200, 150, .22); }
+.ner-ORG { background: rgba(255, 150, 0, .22); }
+.ner-GPE, .ner-DATE { background: rgba(0, 180, 120, .22); }
+.ner:hover::after { content: attr(data-entity); margin-left: .3em; font-size: .75em; opacity: .65; }
+
+
+/* === AKN STRUCTURED HIERARCHICAL LAYOUT (SEPARATE BLOCKS PER LEVEL) === */
+
+/* Main containers use vertical stacking */
+.akn-section,
+.akn-subsection,
+.akn-paragraph,
+.akn-subparagraph,
+.akn-subsubparagraph {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+/* Force number and content to be block-aligned (new line) */
+.akn-num {
+  display: inline-block;
+  font-weight: 600;
+  color: #1e3a8a;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+}
+
+/* Wrap the content as a block */
+.akn-content {
+  display: inline;
+}
+
+/* Ensure the text is inline with content, but separated from number */
+.akn-content .akn-p {
+  display: inline;
+}
+
+/* INDENTATION LOGIC — Progressive indent for each level */
+.akn-subsection {
+  padding-left: 1.5rem;
+}
+.akn-paragraph {
+  padding-left: 3rem;
+}
+.akn-subparagraph {
+  padding-left: 4.5rem;
+}
+.akn-subsubparagraph {
+  padding-left: 6rem;
+}
+/* === STYLING FOR akn-blockList AND akn-item === */
+
+.akn-blockList {
+  display: block;
+  margin-top: 0.75rem;
+  margin-left: 2rem;
+}
+
+.akn-blockList > .akn-listIntroduction {
+  display: block;
+  margin-bottom: 0.5rem;
+  
+  color: #374151;
+}
+
+.akn-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Numbering inside akn-item (e.g., (a), (b)) */
+.akn-item > .akn-num {
+  flex-shrink: 0;
+  white-space: nowrap;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+/* Paragraph text in akn-item */
+.akn-item > .akn-p {
+  flex-grow: 1;
+  display: inline;
+  color: #374151;
+}
+
+
+/* === BIG, CENTERED, BLUE H2 STYLING === */
+h2,
+h2.docsource_main,
+h2.akn-heading {
+  text-align: center;
+  font-size: 2.25rem;        /* Bigger size: ~36px */
+  font-weight: 800;
+  color: #2563eb;            /* Blue-600 (adjust if needed) */
+  margin-top: 2.5rem;
+  margin-bottom: 2rem;
+  line-height: 1.3;
+  border-bottom: 2px solid #bfdbfe;  /* Lighter blue underline */
+  padding-bottom: 0.5rem;
+}
+
+/* === TABLE STYLING FOR akn-table === */
+.akn-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db; /* gray-300 */
+  font-size: 1rem;
+  text-align: left;
+}
+
+/* Header row (th cells) */
+.akn-th {
+  background-color: #f3f4f6; /* gray-100 */
+  color: #1f2937; /* gray-800 */
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  vertical-align: middle;
+}
+
+/* Data row (td cells) */
+.akn-td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  color: #374151; /* gray-700 */
+  vertical-align: top;
+}
+
+/* Table rows */
+.akn-tr:nth-child(even) {
+  background-color: #f9fafb; /* gray-50 */
 }

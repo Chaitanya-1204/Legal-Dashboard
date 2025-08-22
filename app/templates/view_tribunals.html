@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+{% block title %}{{ tribunals.full_title }} - Legal Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  /* Layout / base */
+  .ds-layout{display:flex;gap:1rem;align-items:flex-start;margin-top:1rem}
+  .ds-aside{position:sticky;top:96px;width:260px;flex:0 0 260px}
+  .ds-card{background:#fff;border:1px solid #e5e7eb;border-radius:.5rem;padding:1rem}
+  .ds-title{font-weight:600;margin-bottom:.5rem}
+  .ds-chip{display:block;width:100%;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #e5e7eb;background:#f9fafb;margin-bottom:.5rem;cursor:pointer;text-align:left}
+  .ds-chip[data-active="true"]{outline:1px solid rgba(0,0,0,.05)}
+  .ds-controls{display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap}
+  .ds-btn{padding:.375rem .625rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
+  .ds-btn:hover{background:#f9fafb}
+  .ds-main{flex:1 1 auto;min-width:0}
+  .ds-focus{outline:2px solid rgba(0,0,0,.35);outline-offset:2px}
+  .act-content pre{white-space:pre-wrap;word-break:break-word}
+  .ds-prose p{line-height:1.6;margin:0.5rem 0}
+  .ds-prose h1,.ds-prose h2,.ds-prose h3{margin:1rem 0 .5rem}
+  .highlight-section{outline:2px solid rgba(0,0,0,.45);outline-offset:2px}
+  @media (max-width:1024px){.ds-layout{flex-direction:column}.ds-aside{position:static;width:100%;flex:none}}
+
+
+  .act-content[data-ner="off"] .ner { background: transparent !important; border: none !important; }
+  .act-content[data-ner="off"] .ner::after { content: none !important; }
+
+  .ner-muted { background: transparent !important; border: none !important; box-shadow: none !important; }
+.ds-ner-panel { margin-top: .5rem; border-top: 1px dashed #e5e7eb; padding-top: .5rem; max-height: 40vh; overflow: auto; }
+.ds-ner-item { display: flex; align-items: center; gap: .5rem; margin: .25rem 0; }
+.ds-ner-item input { accent-color: #3b82f6; }
+.ds-ner-count { margin-left: auto; font-size: .75rem; color: #6b7280; }
+</style>
+
+<div class="container mx-auto px-4 md:px-6 py-10">
+  <div class="bg-white p-6 md:p-8 rounded-lg shadow-md">
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 border-b pb-4 mb-4">
+      {{ tribunals.full_title }}
+    </h1>
+
+    <div class="text-gray-600 mb-6 text-sm">
+      <span class="font-semibold">Year:</span> {{ tribunals.year }} |
+      <span class="font-semibold">Tribunal:</span> {{ tribunals.category_name }} |
+      <span class="font-semibold">Law Type:</span> {{ tribunals.law_type }}
+    </div>
+
+    <div class="act-content ds-prose">
+      {{ tribunals.content | safe }}
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (document.querySelector('.ds-layout')) return;
+  const contentArea = document.querySelector('.act-content');
+  if (!contentArea) return;
+
+  // 0) Remove scripts/styles in scraped chunk
+  contentArea.querySelectorAll('script,style,noscript').forEach(n => n.remove());
+
+  // 1) If the scrape was a full page, pull inner .judgments in
+  (function rescueIfNeeded() {
+    if (contentArea.querySelector('[data-structure]')) return;
+    const judg = contentArea.querySelector('.judgments') || document.querySelector('.judgments');
+    if (!judg) return;
+    const frag = document.createDocumentFragment();
+    Array.from(judg.childNodes).forEach(n => frag.appendChild(n.cloneNode(true)));
+    contentArea.innerHTML = ""; contentArea.appendChild(frag);
+  })();
+
+  // 2) Trim chrome: keep only content between first and last annotated block,
+  //    and drop siblings that have no annotations
+  (function trimToAnnotated() {
+    const ann = contentArea.querySelectorAll('[data-structure]');
+    if (!ann.length) return;
+    // remove all nodes before the top container of first annotated
+    let topFirst = ann[0];
+    while (topFirst.parentElement && topFirst.parentElement !== contentArea) topFirst = topFirst.parentElement;
+    while (topFirst.previousSibling) topFirst.previousSibling.remove();
+    // remove all nodes after the bottom container of last annotated
+    let topLast = ann[ann.length - 1];
+    while (topLast.parentElement && topLast.parentElement !== contentArea) topLast = topLast.parentElement;
+    while (topLast.nextSibling) topLast.nextSibling.remove();
+    // drop any direct children that don't contain annotated nodes
+    Array.from(contentArea.children).forEach(el => {
+      if (!el.matches('[data-structure]') && !el.querySelector('[data-structure]')) el.remove();
+    });
+  })();
+
+  if (!contentArea.querySelector('[data-structure]')) return;
+
+  // 3) Build two-column layout
+  const parent = contentArea.parentNode;
+  const layout = document.createElement('div'); layout.className = 'ds-layout';
+  const aside  = document.createElement('aside'); aside.className = 'ds-aside';
+  const main   = document.createElement('div'); main.className = 'ds-main';
+  parent.insertBefore(layout, contentArea);
+  layout.appendChild(aside); layout.appendChild(main); main.appendChild(contentArea);
+
+  const card = document.createElement('div'); card.className = 'ds-card';
+  const title = document.createElement('div'); title.className = 'ds-title'; title.textContent = 'Navigate by Section';
+  const nav = document.createElement('div'); nav.id = 'ds-nav';
+  const controls = document.createElement('div'); controls.className = 'ds-controls';
+  const clearBtn = document.createElement('button'); clearBtn.className = 'ds-btn'; clearBtn.type = 'button'; clearBtn.textContent = 'Clear';
+  controls.appendChild(clearBtn); card.appendChild(title); card.appendChild(nav); card.appendChild(controls); aside.appendChild(card);
+
+  // 4) Collect roles dynamically (preserve encounter order)
+  const nodes = Array.from(contentArea.querySelectorAll('[data-structure]'));
+  let byType = Object.create(null), labels = Object.create(null), order = [], chips = new Map();
+  nodes.forEach(el => {
+    const raw = (el.getAttribute('data-structure') || '').trim();
+    if (!raw) return;
+    const key = raw.toLowerCase();
+    (byType[key] ||= []).push(el);
+    if (!(key in labels)) labels[key] = raw;
+    if (!order.includes(key)) order.push(key);
+  });
+
+  // 5) Dynamic colors: palette applied in order of appearance (no hard-coded role names)
+  const PALETTE = [
+    'rgba(96,165,250,.18)',   // blue
+    'rgba(251,191,36,.20)',   // amber
+    'rgba(167,139,250,.18)',  // violet
+    'rgba(52,211,153,.18)',   // emerald
+    'rgba(244,114,182,.18)',  // pink
+    'rgba(248,113,113,.18)',  // red
+    'rgba(56,189,248,.18)',   // sky
+    'rgba(250,204,21,.18)',   // yellow
+    'rgba(163,230,53,.18)',   // lime
+    'rgba(251,113,133,.18)'   // rose
+  ];
+  const roleColor = {};
+  order.forEach((k,i) => roleColor[k] = PALETTE[i % PALETTE.length]);
+
+  const active = new Set();
+  function on(key, sc) {
+    const chip = chips.get(key);
+    chip.setAttribute('data-active','true');
+    chip.style.backgroundColor = roleColor[key];
+    chip.style.borderColor = 'rgba(0,0,0,.08)';
+
+    const list = byType[key] || [];
+    list.forEach(el => {
+      el.classList.add('ds-highlight');
+      el.style.backgroundColor = roleColor[key];
+    });
+    if (sc && list.length) {
+      list.forEach(el => el.classList.remove('ds-focus'));
+      list[0].classList.add('ds-focus');
+      list[0].scrollIntoView({behavior:'smooth', block:'center'});
+      setTimeout(()=>list[0].classList.remove('ds-focus'),1500);
+    }
+    active.add(key);
+  }
+  function off(key) {
+    const chip = chips.get(key);
+    chip.setAttribute('data-active','false');
+    chip.style.backgroundColor = '';
+    chip.style.borderColor = '';
+    const list = byType[key] || [];
+    list.forEach(el => { el.classList.remove('ds-highlight','ds-focus'); el.style.backgroundColor = ''; });
+    active.delete(key);
+  }
+  function toggle(key, sc){ (chips.get(key).getAttribute('data-active') === 'true') ? off(key) : on(key, sc); }
+  function clearAll(){ Array.from(active).forEach(k => off(k)); }
+  clearBtn.addEventListener('click', clearAll);
+
+  // 6) Render chips for the roles found
+  order.forEach(key => {
+    const chip = document.createElement('button');
+    chip.className = 'ds-chip';
+    chip.type = 'button';
+    chip.textContent = labels[key];          // original case from doc
+    chip.setAttribute('data-active','false');
+    chip.addEventListener('click', () => toggle(key, true));
+    chips.set(key, chip);
+    nav.appendChild(chip);
+  });
+
+  // 7) Link interception: /doc/<id>
+  contentArea.addEventListener('click', function (event) {
+    const a = event.target.closest('a'); if (!a) return;
+    const raw = a.getAttribute('href') || '', abs = a.href || '';
+    const m = (raw.match(/\/doc\/(\d+)/) || abs.match(/\/doc\/(\d+)/));
+    if (m && m[1]) { event.preventDefault(); window.location.href = `/tribunals/view/${m[1]}`; }
+  });
+
+  // 8) ?highlight= and ?ds=
+  const params = new URLSearchParams(window.location.search);
+  const highlightId = params.get('highlight');
+  if (highlightId) {
+    const target = Array.from(contentArea.querySelectorAll('a[href*="/doc/"]'))
+      .find(a => ((a.getAttribute('href')||'') + (a.href||'')).includes(`/doc/${highlightId}`));
+    const section = target && (target.closest('[data-structure]') || target.closest('p, div, section, article'));
+    if (section) {
+      section.scrollIntoView({behavior:'smooth', block:'center'});
+      section.classList.add('highlight-section');
+      setTimeout(()=>section.classList.remove('highlight-section'), 3000);
+    }
+  }
+  const dsParam = params.get('ds');
+  if (dsParam) dsParam.split(',').map(s => s.trim().toLowerCase()).forEach(k => byType[k] && on(k, false));
+
+
+
+  // === NER toggle with filter checkboxes ===
+const DOC_ID = "{{ tribunals.doc_id }}";
+// If your API is on another blueprint, change 'judgments.api_ner_html' below.
+const NER_API = "{{ url_for('tribunals.api_ner_html', doc_id=tribunals.doc_id) }}";
+
+contentArea.setAttribute('data-ner', 'off');
+let RAW_HTML = contentArea.innerHTML;
+let NER_HTML = null;
+
+// state for entity filtering
+let activeLabels = new Set();          // selected labels
+let labelIndex  = new Map();           // label -> [DOM spans]
+let nerPanelBuilt = false;
+
+// create the NER chip
+const nerChip = document.createElement('button');
+nerChip.className = 'ds-chip';
+nerChip.type = 'button';
+nerChip.textContent = 'NER';
+nerChip.setAttribute('data-active','false');
+nav.appendChild(nerChip);
+
+// a panel under NER to hold checkboxes
+const nerPanel = document.createElement('div');
+nerPanel.className = 'ds-ner-panel';
+nerPanel.style.display = 'none';
+nav.appendChild(nerPanel);
+
+// build/refresh index of entities found in the content
+function indexEntities() {
+  labelIndex.clear();
+  contentArea.querySelectorAll('.ner').forEach(span => {
+    const lab = (span.getAttribute('data-entity') || '').toUpperCase();
+    if (!lab) return;
+    if (!labelIndex.has(lab)) labelIndex.set(lab, []);
+    labelIndex.get(lab).push(span);
+  });
+}
+
+// build the checkbox UI (once)
+function buildNerPanel() {
+  nerPanel.innerHTML = '';
+
+  // All / None controls
+  const ctrlRow = document.createElement('div');
+  ctrlRow.className = 'ds-controls';
+  const allBtn  = document.createElement('button'); allBtn.className = 'ds-btn'; allBtn.textContent = 'All';
+  const noneBtn = document.createElement('button'); noneBtn.className = 'ds-btn'; noneBtn.textContent = 'None';
+  ctrlRow.appendChild(allBtn); ctrlRow.appendChild(noneBtn);
+  nerPanel.appendChild(ctrlRow);
+
+  // labels sorted by frequency
+  const entries = Array.from(labelIndex.entries()).sort((a,b) => b[1].length - a[1].length);
+  entries.forEach(([label, nodes]) => {
+    const row = document.createElement('label');
+    row.className = 'ds-ner-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = label; cb.checked = false;
+    const name = document.createElement('span'); name.textContent = label;
+    const count = document.createElement('span'); count.className = 'ds-ner-count'; count.textContent = nodes.length;
+    row.appendChild(cb); row.appendChild(name); row.appendChild(count);
+    nerPanel.appendChild(row);
+
+    cb.addEventListener('change', () => {
+      if (cb.checked) activeLabels.add(label); else activeLabels.delete(label);
+      applyNerFilter();
+    });
+  });
+
+  allBtn.addEventListener('click', () => {
+    activeLabels = new Set(Array.from(labelIndex.keys()));
+    nerPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    applyNerFilter();
+  });
+  noneBtn.addEventListener('click', () => {
+    activeLabels.clear();
+    nerPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    applyNerFilter();
+  });
+
+  nerPanelBuilt = true;
+}
+
+// apply the filter: mute all, then unmute selected labels
+function applyNerFilter() {
+  contentArea.querySelectorAll('.ner').forEach(span => span.classList.add('ner-muted'));
+  activeLabels.forEach(label => {
+    (labelIndex.get(label) || []).forEach(span => span.classList.remove('ner-muted'));
+  });
+}
+
+// keep your existing helper
+function rebuildRoleIndex() {
+  const nodesNew = Array.from(contentArea.querySelectorAll('[data-structure]'));
+  byType = Object.create(null);
+  labels = Object.create(null);
+  order.length = 0;
+
+  nodesNew.forEach(el => {
+    const raw = (el.getAttribute('data-structure') || '').trim();
+    if (!raw) return;
+    const key = raw.toLowerCase();
+    (byType[key] ||= []).push(el);
+    if (!(key in labels)) labels[key] = raw;
+    if (!order.includes(key)) order.push(key);
+  });
+}
+
+// main toggle
+nerChip.addEventListener('click', async () => {
+  const isOn = nerChip.getAttribute('data-active') === 'true';
+
+  if (!isOn) {
+    try {
+      if (!NER_HTML) {
+        nerChip.disabled = true;
+        nerChip.textContent = 'NER (loading...)';
+        const res = await fetch(NER_API, { headers: { 'Accept': 'application/json' }});
+        const data = await res.json();
+        if (!res.ok || !data.html) throw new Error(data.error || 'NER API failed');
+        NER_HTML = data.html;
+      }
+
+      // swap NER HTML in
+      contentArea.innerHTML = NER_HTML;
+      contentArea.setAttribute('data-ner', 'on');
+      nerChip.setAttribute('data-active','true');
+
+      // re-index roles and entities
+      rebuildRoleIndex();
+      indexEntities();
+
+      // show / (re)build the panel
+      if (!nerPanelBuilt) buildNerPanel();
+      nerPanel.style.display = 'block';
+
+      // default to "none selected" (everything muted)
+      activeLabels.clear();
+      nerPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+      applyNerFilter();
+
+      // re-bind your link interceptor (DOM was replaced)
+      contentArea.addEventListener('click', function (event) {
+        const a = event.target.closest('a'); if (!a) return;
+        const raw = a.getAttribute('href') || '', abs = a.href || '';
+        const m = (raw.match(/\/doc\/(\d+)/) || abs.match(/\/doc\/(\d+)/));
+        if (m && m[1]) { event.preventDefault(); window.location.href = `/tribunals/view/${m[1]}`; }
+      });
+
+    } catch (e) {
+      console.error('[NER] toggle failed', e);
+      alert('Failed to load NER. Check server logs.');
+    } finally {
+      nerChip.disabled = false;
+      nerChip.textContent = 'NER';
+    }
+  } else {
+    // turn OFF: restore raw HTML and hide panel
+    contentArea.innerHTML = RAW_HTML;
+    contentArea.setAttribute('data-ner', 'off');
+    nerChip.setAttribute('data-active','false');
+    nerPanel.style.display = 'none';
+    rebuildRoleIndex();
+  }
+});
+
+
+
+
+});
+
+</script>
+{% endblock %}

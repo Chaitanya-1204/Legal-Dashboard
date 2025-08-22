@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
             description: 'Access the latest judgments from the Supreme Court of India.',
             logo: `<i class="fas fa-gavel fa-2x"></i>`,
             color: 'blue',
-            link: '#'
+            link: '/sc/'
         },
         {
             title: 'Supreme Court Daily Orders',
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
             description: 'Access orders and information from various tribunals.',
             logo: `<i class="fas fa-users-cog fa-2x"></i>`,
             color: 'indigo',
-            link: '#'
+            link: '/tribunals/'
         },
         {
             title: 'Blogs',

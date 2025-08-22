@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Supreme Court Judgments by Year - Legal Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 md:px-6 py-10">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">Supreme Court Judgments</h1>
+    <form action="{{ url_for('judgments.search') }}" method="get" class="relative w-full max-w-md ml-4">
+      <input type="text" name="q" placeholder="Search by title or doc_id..." class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring focus:border-gray-400">
+      <button class="absolute right-2 top-1/2 -translate-y-1/2 p-1" aria-label="Search">
+        <i class="fas fa-search"></i>
+      </button>
+    </form>
+  </div>
+
+  <h2 class="text-lg text-gray-600 mb-8">Browse by Year</h2>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+    {% for y in years %}
+    <a href="{{ url_for('judgments.list_by_year', year=y) }}"
+       class="block text-center bg-white border border-gray-200 hover:border-gray-300 rounded-lg p-6 shadow-sm hover:shadow transition duration-150 text-lg font-semibold text-gray-800">
+      {{ y }}
+    </a>
+    {% else %}
+    <div class="col-span-full text-center bg-white p-10 rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold text-gray-700">No Years Found</h2>
+      <p class="text-gray-500 mt-2">Import the CSV into MongoDB to get started.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

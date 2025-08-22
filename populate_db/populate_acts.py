@@ -1,31 +1,23 @@
 # main_populate_script.py
-
 import os
 import csv
-import re # Import the regular expression module
+import re
 from pymongo import MongoClient
 from datetime import datetime
+from bs4 import BeautifulSoup
+from tqdm import tqdm
 
 # --- CONFIGURATION ---
 # Update these variables to match your setup
-
-# Path to your metadata CSV file
 METADATA_CSV_PATH = '/DATACHAI/Final_Data/laws/metadata.csv'
-
-# Path to your new law type mapping CSV file
-LAW_TYPE_CSV_PATH = '/DATACHAI/Final_Data/laws/categories_and_folders.csv' 
-
-# Name of the main folder containing your HTML documents
+LAW_TYPE_CSV_PATH = '/DATACHAI/Final_Data/laws/categories_and_folders.csv'
 MAIN_DOCUMENTS_FOLDER = '/DATACHAI/Final_Data/laws'
-
-# Log file for processing issues
 LOG_FILE_NAME = 'processing_issues.log'
-
-# MongoDB connection details
 MONGO_URI = "mongodb://localhost:27017/"
 DATABASE_NAME = "legal_dashboard_db"
 COLLECTION_NAME = "acts"
 
+# --- HELPER FUNCTIONS ---
 
 def load_law_type_mapping(filepath):
     """Reads the law type CSV and returns a dictionary for easy lookup."""
@@ -35,7 +27,6 @@ def load_law_type_mapping(filepath):
         with open(filepath, mode='r', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                # Key: category_name, Value: law_type
                 mapping[row['category_name']] = row['law_type']
         print(f"   -> Successfully loaded {len(mapping)} category-to-law-type mappings.")
         return mapping
@@ -56,7 +47,6 @@ def setup_log_file():
         print(f"📝 Log file '{LOG_FILE_NAME}' created for processing issues.")
     except Exception as e:
         print(f"❌ Could not create log file: {e}")
-
 
 def log_issue(issue_type, detail):
     """Appends an issue to the log file."""
@@ -84,21 +74,74 @@ def calculate_word_count(html_string):
     return len(words)
 
 
+def clean_html_content(html_content):
+    """
+    Cleans HTML using BeautifulSoup:
+    - Removes <span class="akn-remark">
+    - Removes <span> wrapping <a class="akn-ref">
+    - Removes <span class="akn-p">References</span>
+    - Removes <span class="akn-p">[* * *]</span> and similar
+    - Cleans text like "*** [Mizoram;]" → "Mizoram;"
+    - Removes bracket-only <span class="akn-p"> like '[', ']', ']', ']}}'
+    - Strips trailing hyphens from all text nodes
+    """
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    # 1. Remove <span class="akn-remark">
+    for span in soup.find_all('span', class_='akn-remark'):
+        span.decompose()
+
+    # 2. Remove <span> containing <a class="akn-ref">
+    for a in soup.find_all('a', class_='akn-ref'):
+        if a.parent and a.parent.name == 'span':
+            a.parent.decompose()
+
+    # 3. Remove <span class="akn-p">References</span>
+    for span in soup.find_all('span', string='References'):
+        if 'akn-p' in (span.get('class') or []):
+            span.decompose()
+
+    # 4. Remove <span class="akn-p"> containing only brackets/braces/asterisks (e.g., [* * *], ], }})
+    junk_pattern = re.compile(r'^[\*\[\]\{\}\s]+$')
+    for span in soup.find_all('span', class_='akn-p'):
+        if junk_pattern.match(span.get_text(strip=True)):
+            span.decompose()
+
+    # 5. Fix spans like: "*** [Mizoram;]" → "Mizoram;"
+    cleanup_star_bracket_pattern = re.compile(r'^\*+\s*\[([^\]]+)\]$')
+    for span in soup.find_all('span', class_='akn-p'):
+        text = span.get_text(strip=True)
+        match = cleanup_star_bracket_pattern.match(text)
+        if match:
+            cleaned = match.group(1).strip()
+            span.string = cleaned
+
+    # 6. Remove trailing hyphens from all string text
+    for text_node in soup.find_all(string=True):
+        if text_node.strip().endswith('-'):
+            cleaned = re.sub(r'[\u2010-\u2015\-]+$', '', text_node.strip())
+            text_node.replace_with(cleaned)
+
+    return str(soup)
+
+
+
+
+# --- MAIN SCRIPT LOGIC ---
+
 def populate_acts_collection():
     """
-    Connects to MongoDB, populates it with data, and verifies file coverage.
-    Dynamically assigns 'law_type' based on an external mapping file.
+    Connects to MongoDB, cleans HTML content, populates the database,
+    and verifies file coverage.
     """
     print("--- Starting MongoDB Population Script ---")
     setup_log_file()
-    
-    # Load the law type mapping first
+
     law_type_map = load_law_type_mapping(LAW_TYPE_CSV_PATH)
     if law_type_map is None:
         print("Aborting script due to missing law type mapping.")
         return
 
-    # --- 1. ESTABLISH MONGODB CONNECTION ---
     try:
         client = MongoClient(MONGO_URI)
         db = client[DATABASE_NAME]
@@ -109,7 +152,6 @@ def populate_acts_collection():
         print(f"❌ Error connecting to MongoDB: {e}")
         return
 
-    # --- 2. CLEAR EXISTING COLLECTION DATA ---
     try:
         delete_result = acts_collection.delete_many({})
         print(f"🧹 Cleared existing data. {delete_result.deleted_count} documents removed from '{COLLECTION_NAME}'.")
@@ -118,77 +160,68 @@ def populate_acts_collection():
         client.close()
         return
 
-    # --- 3. READ METADATA AND POPULATE ---
     print(f"📂 Reading metadata from '{METADATA_CSV_PATH}'...")
-    
     successful_inserts = 0
     failed_files = 0
     inserted_filenames = set()
 
     try:
         with open(METADATA_CSV_PATH, mode='r', encoding='utf-8') as csvfile:
-            csv_reader = csv.DictReader(csvfile)
-            
-            for row in csv_reader:
+            csv_rows = list(csv.DictReader(csvfile))
+
+            for row in tqdm(csv_rows, desc="Populating Database", unit="docs"):
                 try:
-                    # Keep year as a string for path construction
                     doc_id_str = row['doc_id']
                     year_str = row['year']
-                    
                     full_title = row['full_title']
                     category = row['category']
                     category_folder = row['category_folder']
                     filename = row['filename']
-
                     law_type = law_type_map.get(category, "Uncategorized")
+
                     if law_type == "Uncategorized":
                         log_issue("Missing Law Type", f"Category '{category}' not found in law_types.csv.")
 
-                    # Use the string version of year for the path
                     html_file_path = os.path.join(MAIN_DOCUMENTS_FOLDER, category_folder, year_str, filename)
 
                     try:
                         with open(html_file_path, 'r', encoding='utf-8') as html_file:
                             html_content = html_file.read()
                     except FileNotFoundError:
-                        print(f"   ⚠️  Warning: HTML file not found for CSV entry. Path: {html_file_path}")
                         log_issue("File Not Found", html_file_path)
                         failed_files += 1
                         continue
                     except Exception as e:
-                        print(f"   ❌ Error reading file {html_file_path}: {e}")
+                        log_issue("File Read Error", f"Could not read {html_file_path}: {e}")
                         failed_files += 1
                         continue
-                    
-                    word_count = calculate_word_count(html_content)
+
+                    cleaned_html_content = clean_html_content(html_content)
+                    word_count = calculate_word_count(cleaned_html_content)
 
                     document_to_insert = {
-                        # Convert to integers just before inserting into the database
                         'doc_id': int(doc_id_str),
                         'full_title': full_title,
                         'category': category,
                         'year': int(year_str),
                         'law_type': law_type,
                         'word_count': word_count,
-                        'content': html_content
+                        'content': cleaned_html_content
                     }
 
                     acts_collection.insert_one(document_to_insert)
                     inserted_filenames.add(filename)
                     successful_inserts += 1
-                    print(f"   -> Inserted doc_id: {doc_id_str} (Type: {law_type}, Words: {word_count})")
 
                 except KeyError as e:
-                    print(f"   ❌ Error: Missing expected column in CSV: {e}. Please check CSV headers.")
+                    log_issue("CSV Column Error", f"Missing column in metadata.csv row: {e}")
                     continue
-
 
     except FileNotFoundError:
         print(f"❌ Critical Error: Metadata file not found at '{METADATA_CSV_PATH}'.")
     except Exception as e:
         print(f"❌ An unexpected error occurred during CSV processing: {e}")
-    
-    # --- 4. VERIFY FILE COVERAGE ---
+
     print("\n--- Verifying File Coverage ---")
     all_disk_files = get_all_html_files(MAIN_DOCUMENTS_FOLDER)
     unpopulated_files = all_disk_files - inserted_filenames
@@ -202,7 +235,6 @@ def populate_acts_collection():
              log_issue("Not in CSV", f)
         print(f"   Details logged to '{LOG_FILE_NAME}'.")
 
-    # --- 5. CLOSE CONNECTION AND REPORT SUMMARY ---
     client.close()
     print("\n--- Script Finished ---")
     print(f"📊 Summary:")
@@ -213,6 +245,5 @@ def populate_acts_collection():
         print(f"   - Check '{LOG_FILE_NAME}' for a detailed list of all issues.")
     print("✅ MongoDB connection closed.")
 
-# --- RUN THE SCRIPT ---
 if __name__ == "__main__":
     populate_acts_collection()

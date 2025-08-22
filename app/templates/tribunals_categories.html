@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Tribunal Categories - Legal Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 md:px-6 py-10">
+  <div class="text-center mb-10">
+    <h1 class="text-3xl font-bold text-gray-900">Browse Tribunals</h1>
+    <p class="text-gray-600 mt-2">Select a tribunal to view available years.</p>
+  </div>
+
+  <div class="acts-container">
+    {% for group in grouped_data %}
+      <div class="act-category">
+        {# If law_type is "tribunal", show a friendlier heading #}
+        <h2 class="category-title">{{ group._id == 'tribunal' and 'Tribunals' or group._id }}</h2>
+
+        <div class="category-grid">
+          {% for category in group.categories %}
+            <a href="{{ url_for('tribunals.show_years', category_name=category) }}" class="category-card">
+              <i class="fas fa-scroll category-card-icon"></i>
+              <span class="category-card-title">{{ category }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <div class="col-span-full text-center bg-white p-10 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold text-gray-700">No Categories Found</h2>
+        <p class="text-gray-500 mt-2">The database appears to be empty. Please run the importer script to populate it.</p>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

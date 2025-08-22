@@ -1,7 +1,7 @@
 # app/acts/routes.py
 # This file contains all the routes and logic for the 'Acts' section.
 
-from flask import Blueprint, render_template, abort
+from flask import Blueprint, render_template, abort, redirect, url_for, request
 from app import db # Import the shared db connection from the app factory
 from urllib.parse import unquote
 
@@ -106,9 +106,27 @@ def list_acts_by_year(category_name, year):
 @acts_bp.route('/view/<int:doc_id>')
 def view_act(doc_id):
     """
-    Renders a page displaying the full content of a single act.
+    Renders a page displaying the full content of a single document.
+    If the doc_id is a child link, it redirects to the parent and highlights the section.
     """
+    # 1. Check if the requested doc_id is a child link in our links collection
+    link_info = db.document_links.find_one({'doc_id': doc_id})
+    
+    if link_info:
+        # If it is a child link, get the parent's doc_id
+        parent_doc_id = link_info.get('parent_doc_id')
+        if parent_doc_id:
+            # Redirect to the parent's page, passing the original doc_id
+            # as a query parameter for highlighting on the frontend.
+            return redirect(url_for('acts.view_act', doc_id=parent_doc_id, highlight=doc_id))
+
+    # 2. If it's not a child link (or if something went wrong), load the document directly.
+    # We assume for now that all linked documents are in the 'acts' collection.
+    # This could be expanded to check other collections based on the 'type' in document_links.
     act = db.acts.find_one({'doc_id': doc_id}, {'_id': 0})
     if not act:
+        # If the document doesn't exist in 'acts', you might want to check 'judgments' etc.
+        # For now, we'll just return a 404.
         abort(404)
+        
     return render_template('view_act.html', act=act)
