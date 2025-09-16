@@ -1,0 +1,334 @@
+/* ---
+  Legal Dashboard - Judgment Theme (modified)
+  File: style-judgments.css
+--- */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+
+/* ------------------ CSS Variables / Scale ------------------ */
+:root{
+  --bg: #f3f4f6;            /* gray-100 */
+  --text: #1f2937;          /* gray-800 */
+  --text-dim: #374151;      /* gray-700 */
+  --muted: #4b5563;         /* gray-600 */
+  --border: #e5e7eb;        /* gray-200 */
+  --border-strong:#d1d5db;  /* gray-300 */
+  --card:#fff;
+  --link:#2563eb;           /* blue-600 */
+  --link-hover:#1d4ed8;     /* blue-700 */
+  --heading:#111827;        /* gray-900 */
+  --brand:#1e3a8a;          /* blue-900 */
+  --radius-sm:.375rem;
+  --radius-md:.5rem;
+  --radius-lg:.75rem;
+  --shadow-1:0 1px 3px 0 rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1);
+  --shadow-2:0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);
+
+  /* rhythm */
+  --space-1:.25rem;
+  --space-2:.5rem;
+  --space-3:.75rem;
+  --space-4:1rem;
+  --space-5:1.25rem;
+  --space-6:1.5rem;
+  --space-7:1.75rem;
+  --space-8:2rem;
+}
+
+/* ------------------ Base ------------------ */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body{
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  margin: 0;
+  padding: 0;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* container */
+.container{
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-8) 1.5rem;
+}
+
+/* ------------------ Wrapper & Layout ------------------ */
+.judgments-wrapper{
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+@media (min-width:1024px){
+  .judgments-wrapper{
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+/* main content */
+.judgments{
+  flex: 1;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-2);
+  padding: 2rem 2.5rem;
+  overflow: hidden;
+  min-width: 0;
+  /* ---- universal rhythm: space between any two siblings ---- */
+  /* this guarantees “proper space between two tags” even if raw HTML is messy */
+}
+.judgments :where(*) + :where(*){ margin-top: var(--space-3); }
+
+/* right nav */
+.right_doc_nav{
+  width: 100%;
+  flex-shrink: 0;
+}
+@media (min-width:1024px){
+  .right_doc_nav{
+    width: 280px;
+    position: sticky;
+    top: 2rem;
+  }
+}
+.right_doc_nav .category{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-1);
+}
+.right_doc_nav .category_title{
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--heading);
+  margin: 0 0 var(--space-4) 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+.right_doc_nav .item_toselect a{
+  display: block;
+  padding: .5rem .75rem;
+  margin-bottom: .25rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background-color .2s ease, color .2s ease;
+}
+.right_doc_nav .item_toselect a:hover{
+  background: #eff6ff; /* blue-50 */
+  color: var(--link-hover);
+}
+
+/* ------------------ Hide site chrome from source ------------------ */
+#tophdr, .hdrtop{ display:none; }
+
+/* doc options */
+.docoptions{
+  background: #f9fafb; /* gray-50 */
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+}
+.docoptions button,
+.docoptions a{
+  font: 500 .875rem/1 'Inter', sans-serif;
+  background: var(--card);
+  color: var(--text-dim);
+  border: 1px solid var(--border-strong);
+  padding: .5rem 1rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  transition: border-color .15s ease, color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.docoptions button:hover,
+.docoptions a:hover{
+  border-color: #3b82f6;
+  color: #3b82f6;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+
+/* ------------------ Typography inside judgments ------------------ */
+.docsource_main,
+.doc_title{
+  color: var(--brand);
+  text-align: center;
+  margin-bottom: var(--space-4);
+  line-height: 1.3;
+}
+
+/* titles */
+.docsource_main{
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+.doc_title{
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: 2.5rem;
+}
+
+/* meta */
+.doc_author,
+.doc_bench{
+  text-align: center;
+  font-size: 1.0625rem;
+  font-style: italic;
+  color: var(--muted);
+  margin-bottom: var(--space-6);
+}
+
+/* paragraphs / blocks */
+.judgments p,
+.judgments blockquote{
+  color: var(--text-dim);
+}
+
+/* headings scale with extra top margin to prevent crowding */
+.judgments h1{ font-size: 1.875rem; font-weight:700; color:var(--heading); margin-top: 1.25rem; }
+.judgments h2{ font-size: 1.5rem;   font-weight:700; color:var(--heading); margin-top: 1.1rem; }
+.judgments h3{ font-size: 1.25rem;  font-weight:600; color:var(--heading); margin-top: 1rem; }
+.judgments h4{ font-size: 1.125rem; font-weight:600; color:var(--heading); margin-top: .9rem; }
+
+/* lists */
+.judgments ul,
+.judgments ol{ padding-left: 1.25rem; }
+.judgments li + li{ margin-top: .25rem; }
+
+/* blockquote */
+.judgments blockquote{
+  border-left: 4px solid var(--border-strong);
+  padding-left: var(--space-4);
+  color: var(--muted);
+  font-style: italic;
+  background: #fafafa;
+  border-radius: .25rem;
+  padding-top: .5rem;
+  padding-bottom: .5rem;
+}
+
+/* pre/code */
+.judgments pre{
+  font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #f9fafb;
+  padding: 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  white-space: pre-wrap;      /* wrap long lines */
+  word-break: break-word;     /* prevent overflow */
+  color: #111827;
+  font-size: .95rem;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+.judgments code{
+  font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #f3f4f6;
+  padding: .125rem .375rem;
+  border-radius: .25rem;
+  border: 1px solid var(--border);
+}
+
+/* tables */
+.judgments table{
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.judgments th,
+.judgments td{
+  padding: .625rem .75rem;
+  border-top: 1px solid var(--border);
+  vertical-align: top;
+}
+.judgments thead th{
+  background: #f9fafb;
+  text-align: left;
+  font-weight: 600;
+}
+
+/* images / figures */
+.judgments img{
+  max-width: 100%;
+  height: auto;
+  border-radius: .25rem;
+}
+.judgments figure{
+  margin: 0;
+}
+.judgments figcaption{
+  font-size: .875rem;
+  color: var(--muted);
+}
+
+/* links */
+a{
+  color: var(--link);
+  text-decoration: none;
+}
+a:hover{ text-decoration: underline; }
+
+/* citations bar */
+.covers{
+  text-align: center;
+  margin-bottom: var(--space-8);
+  font-size: .9rem;
+  padding: .75rem;
+  background: #eef2ff;          /* indigo-50 */
+  border: 1px solid #c7d2fe;    /* indigo-200 */
+  border-radius: var(--radius-md);
+  color: #3730a3;               /* indigo-800 */
+}
+
+/* ------------------ Extras for messy HTML ------------------ */
+/* collapse huge gaps introduced by <br><br><br> runs */
+.judgments br + br{ display:none; }
+
+/* ensure long words/URLs wrap */
+.judgments,
+.judgments *{ overflow-wrap: anywhere; }
+
+/* remove double spacing when your app adds highlight wrappers */
+.judgments .ds-highlight + .ds-highlight{ margin-top: var(--space-3); }
+
+/* soften HR */
+.judgments hr{
+  border: none;
+  border-top: 1px dashed var(--border);
+  margin: var(--space-6) 0;
+}
+
+/* small notes */
+.judgments .note,
+.judgments .footnote{
+  font-size: .9rem;
+  color: var(--muted);
+}
+
+/* print-friendly */
+@media print{
+  body{ background: #fff; }
+  .judgments{ box-shadow:none; border-color:#ddd; }
+  .right_doc_nav{ display:none; }
+}

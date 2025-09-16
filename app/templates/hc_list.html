@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% set page_title = "High Court Judgments" %}
+{% if year %}{% set page_title = "High Court – " ~ year %}{% endif %}
+
+{% block title %}{{ page_title }} - Legal Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 md:px-6 py-10">
+  <div class="mb-8 text-sm text-gray-500 flex items-center gap-2">
+    <a href="{{ url_for('high_courts.list_all') }}" class="hover:underline">High Court</a>
+    {% if year %}<span>›</span><span class="font-semibold">{{ year }}</span>{% endif %}
+  </div>
+
+  <h1 class="text-3xl font-bold text-gray-900 mb-6">{{ page_title }}</h1>
+
+  {% if judgments|length == 0 %}
+    <div class="bg-white border border-gray-200 rounded-lg p-10 text-center text-gray-600">
+      No judgments found.
+    </div>
+  {% else %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {% for j in judgments %}
+        <a href="{{ url_for('high_courts.view', doc_id=j.doc_id) }}"
+           class="no-underline block bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow transition">
+          <div class="flex items-start gap-3">
+            <i class="fas fa-scale-balanced text-xl pt-1"></i>
+            <div class="text-lg font-semibold text-gray-900 leading-snug">
+              {{ j.title or j.full_title or j.doc_id }}
+            </div>
+          </div>
+          {% if j.year %}
+            <div class="mt-2 text-xs text-gray-500">Year: {{ j.year }}</div>
+          {% endif %}
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

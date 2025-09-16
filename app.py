@@ -30,6 +30,10 @@ def home():
     """
     return render_template('index.html')
 
+from app.services.summarize.routes import summary_bp
+app.register_blueprint(summary_bp, url_prefix="/summary")
+
+
 # --- Main Entry Point ---
 
 # This is a standard Python construct. 

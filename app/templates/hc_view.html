@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+{% block title %}{{ judgment.title or judgment.full_title or "High Court Judgment" }} - Legal Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  :root{
+    --bg: #f7f8fb;
+    --card: #fcfcfe;
+    --border: #e7eaf0;
+    --ink: #0f172a;
+    --muted: #6B7280;
+    --radius: 16px;
+  }
+  .wrap{
+    max-width:1200px;margin:28px auto;padding:0 18px;
+    font-family:Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+    color:var(--ink);
+  }
+  .grid{display:grid;grid-template-columns:240px 1fr;gap:18px}
+  @media (max-width:980px){.grid{grid-template-columns:1fr}}
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px 16px;
+    box-shadow:0 1px 2px rgba(16,24,40,.04);
+  }
+  .btn{
+    display:block;width:100%;text-align:left;
+    border:1px solid #d0d7de;background:#f6f8fa;color:#1f2328;
+    padding:10px 12px;border-radius:10px;cursor:pointer;text-decoration:none;margin-bottom:10px
+  }
+
+  #doc{
+    max-height:76vh;overflow:auto;border:1px solid var(--border);
+    border-radius:14px;padding:14px;background:#fff
+  }
+
+  /* One paragraph per box. Starts COLORED; click toggles color off/on (new random color when on). */
+  .box{
+    border:1px solid #e5e7eb;border-radius:14px;padding:16px 18px;margin:18px 0 10px 0;
+    line-height:1.9;font-size:17.5px;letter-spacing:.12px;background:#fff;
+    cursor:pointer;transition:background .15s, box-shadow .15s, transform .05s;
+    word-wrap:break-word; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  .box:hover{ box-shadow:0 1px 0 rgba(15,23,42,.06) }
+  .box:active{ transform:translateY(1px) }
+
+  /* very thin black separator between paragraphs (fixed) */
+  .para-gap{
+    height:1px; background:#000; margin:10px 0 18px 0; border-radius:0;
+  }
+
+  /* visual break we insert before qualifying "number." lines */
+  .box .lb{ display:block; height:10px }
+
+  .box a{ color:#1a73e8; text-decoration:underline }
+  .box a:visited{ color:#1a73e8 }
+</style>
+
+<div class="wrap">
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px">
+    <div><b style="font-size:20px">{{ judgment.title or judgment.full_title or judgment.doc_id }}</b></div>
+  </header>
+
+  <div class="grid">
+    <aside class="card">
+      <div style="font-weight:600;margin-bottom:10px">Actions</div>
+      <a class="btn" href="{{ ner_url }}" target="_blank" rel="noopener">Run NER</a>
+      <a class="btn" href="{{ sum_url }}" target="_blank" rel="noopener">Generate Summary</a>
+      <a class="btn" href="{{ rr_url }}"  target="_blank" rel="noopener">Detect Rhetorical Roles</a>
+    </aside>
+
+    <section class="card">
+      <h3 style="margin:0 0 10px 0;font-size:18px">Document</h3>
+
+      <div id="doc">
+        <div id="boxes"></div>
+        <p id="empty" style="display:none;color:var(--muted)">No text available.</p>
+      </div>
+
+      <script id="raw-html" type="application/json">{{ (raw_html or "") | tojson }}</script>
+      <!-- SAFE: resolver_url0 is provided by the route; can be empty if resolver bp isn't registered -->
+      <meta id="resolver-url-0" content="{{ resolver_url0 }}">
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------- utilities ----------
+  function escAttr(s){
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+  // Random soft RGB (pastel) each time we need a color
+  function randomSoftRGB(aBg = 0.23, aOutline = 0.35){
+    const rand = () => 170 + Math.floor(Math.random() * 86); // [170,255]
+    const r = rand(), g = rand(), b = rand();
+    const bg = `rgba(${r},${g},${b},${aBg})`;
+    const r2 = Math.max(0, r - 40), g2 = Math.max(0, g - 40), b2 = Math.max(0, b - 40);
+    const outline = `rgba(${r2},${g2},${b2},${aOutline})`;
+    return { bg, outline };
+  }
+
+  // words / '.' / other punctuation; preserve href for <a>
+  const TOKEN_RE = /([A-Za-zÀ-ÖØ-öø-ÿ0-9][A-Za-zÀ-ÖØ-öø-ÿ0-9’'\-]*|\.|[,;:!?()–—"“”‘’]+)/g;
+
+  function tokenizeWithHref(text, href){
+    const out = [];
+    if(!text) return out;
+    let m;
+    while((m = TOKEN_RE.exec(text)) !== null){
+      const t = m[0];
+      if (t === '.') out.push({type:'dot', text:'.', href: href || null});
+      else if (/^[,;:!?()–—"“”‘’]+$/.test(t)) out.push({type:'punct', text:t, href: href || null});
+      else out.push({type:'word', text:t, href: href || null});
+    }
+    return out;
+  }
+
+  function tokensFromNode(root){
+    const toks = [];
+    const SKIP = new Set(['SCRIPT','STYLE','NOSCRIPT']);
+    function walk(node){
+      if(!node) return;
+      if(node.nodeType === 3){ toks.push(...tokenizeWithHref(node.nodeValue, null)); return; }
+      if(node.nodeType !== 1) return;
+      const tag = node.tagName;
+      if(SKIP.has(tag)) return;
+      if(tag === 'A'){
+        const href = node.getAttribute('href') || '';
+        toks.push(...tokenizeWithHref((node.textContent || ''), href));
+        return;
+      }
+      for(const c of node.childNodes) walk(c);
+    }
+    walk(root);
+    return toks;
+  }
+
+  // sentence HTML builder with INTERNAL split rule:
+  // insert <span class="lb"></span> for pattern: [non-digit word][.][number][.]
+  function tokensSliceToHTML(slice){
+    let html = '';
+    let currentHref = null;
+    let buf = [];
+    let lastAppendWasLB = false;
+    let lastSigTokenType = null;           // 'word' | 'punct' | 'dot'
+    let lastSigWordIsDigits = false;
+
+    function appendSpaceIfNeeded(){
+      if (html && !html.endsWith(' ') && !lastAppendWasLB) html += ' ';
+      lastAppendWasLB = false;
+    }
+    function flush(){
+      if (!buf.length) return;
+      appendSpaceIfNeeded();
+      const text = buf.join(' ');
+      if (currentHref) html += `<a href="${escAttr(currentHref)}">${text}</a>`;
+      else html += text;
+      buf = [];
+    }
+    function appendLB(){
+      html += '<span class="lb"></span>';
+      lastAppendWasLB = true;
+    }
+
+    for (let i = 0; i < slice.length; i++){
+      const t = slice[i];
+
+      if (t.type === 'word'){
+        if (currentHref === t.href){ buf.push(t.text); }
+        else { flush(); currentHref = t.href || null; buf.push(t.text); }
+        lastSigTokenType = 'word';
+        lastSigWordIsDigits = /^\d+$/.test(t.text);
+      }
+      else if (t.type === 'punct'){
+        flush();
+        if (currentHref) html += `<a href="${escAttr(currentHref)}">${t.text}</a>`;
+        else html += t.text;
+        lastSigTokenType = 'punct';
+      }
+      else if (t.type === 'dot'){
+        flush();
+        html += '.';
+        const next1 = slice[i+1], next2 = slice[i+2];
+        if (lastSigTokenType === 'word' && !lastSigWordIsDigits &&
+            next1 && next1.type === 'word' && /^\d+$/.test(next1.text) &&
+            next2 && next2.type === 'dot'){
+          appendLB(); // line break BEFORE the upcoming number
+        }
+        lastSigTokenType = 'dot';
+      }
+    }
+    flush();
+    return html.trim();
+  }
+
+  function startsWithNumberDot(slice){
+    if (!slice || !slice.length) return false;
+    let i = 0;
+    while (i < slice.length && slice[i].type === 'punct') i++;
+    if (i < slice.length && slice[i].type === 'word' && /^\d+$/.test(slice[i].text)){
+      const j = i + 1;
+      return (j < slice.length && slice[j].type === 'dot');
+    }
+    return false;
+  }
+
+  function prevEndsWithNonDigitWord(prevSlice){
+    if (!prevSlice || !prevSlice.length) return false;
+    let sawDot = false;
+    for (let i = prevSlice.length - 1; i >= 0; i--){
+      const t = prevSlice[i];
+      if (!sawDot){
+        if (t.type === 'dot'){ sawDot = true; continue; }
+        else continue;
+      } else {
+        if (t.type === 'word') return !/^\d+$/.test(t.text);
+      }
+    }
+    return false;
+  }
+
+  // ---------- load HTML ----------
+  let raw = "";
+  try { raw = JSON.parse(document.getElementById('raw-html').textContent || '""'); } catch(_) {}
+  const boxesWrap = document.getElementById('boxes');
+  const emptyEl = document.getElementById('empty');
+  if(!raw || !raw.trim()){ emptyEl.style.display = 'block'; return; }
+
+  const parsed = new DOMParser().parseFromString(raw, 'text/html');
+  const container = parsed.querySelector('.judgments') || parsed.body || parsed.documentElement;
+  container.querySelectorAll('script,style,noscript').forEach(n=>n.remove());
+  const ad = container.querySelector('.ad_doc'); if (ad) ad.remove();
+
+  const tokens = tokensFromNode(container);
+
+  // ---------- counted full stops (>=10 words apart) ----------
+  const sentences = [];
+  let wordsSinceStop = 0;
+  let acc = [];
+  for(const t of tokens){
+    acc.push(t);
+    if (t.type === 'word') wordsSinceStop++;
+    else if (t.type === 'dot'){
+      if (wordsSinceStop >= 10){
+        sentences.push(acc.slice());  // sentence ends at this counted dot
+        acc = [];
+        wordsSinceStop = 0;
+      }
+    }
+  }
+
+  const PAR_SIZE = 10; // <<< 10 counted stops (sentences) per paragraph
+  const fullParas = Math.floor(sentences.length / PAR_SIZE);
+  if (fullParas === 0){ emptyEl.style.display = 'block'; return; }
+
+  const paragraphs = [];
+  for (let i=0;i<fullParas;i++){
+    const paraSlices = sentences.slice(i*PAR_SIZE, i*PAR_SIZE + PAR_SIZE);
+
+    const parts = [];
+    paraSlices.forEach((slice, k)=>{
+      const html = tokensSliceToHTML(slice);
+      if (k === 0){
+        parts.push(html);
+      }else{
+        const prev = paraSlices[k-1];
+        if (startsWithNumberDot(slice) && prevEndsWithNonDigitWord(prev)){
+          parts.push('<span class="lb"></span>');
+          parts.push(html);
+        }else{
+          parts.push(' ');
+          parts.push(html);
+        }
+      }
+    });
+    paragraphs.push(parts.join(''));
+  }
+
+  // ---------- render (one .box per paragraph) + thin black separator ----------
+  paragraphs.forEach((paraHTML, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'box';
+    div.innerHTML = paraHTML;
+
+    // initial color ON
+    const c = randomSoftRGB();
+    div.dataset.colored = '1';
+    div.style.background = c.bg;
+    div.style.boxShadow = `inset 0 0 0 2px ${c.outline}`;
+
+    // toggle on each click: off -> on (new random color) -> off -> ...
+    div.addEventListener('click', (ev)=>{
+      if (ev.target && ev.target.closest('a')) return; // allow link clicks
+      if (div.dataset.colored === '1'){
+        // turn OFF
+        div.style.background = '';
+        div.style.boxShadow = '';
+        div.dataset.colored = '0';
+      } else {
+        // turn ON with a NEW random color
+        const c2 = randomSoftRGB();
+        div.style.background = c2.bg;
+        div.style.boxShadow = `inset 0 0 0 2px ${c2.outline}`;
+        div.dataset.colored = '1';
+      }
+    });
+
+    boxesWrap.appendChild(div);
+
+    if (idx < paragraphs.length - 1){
+      const sep = document.createElement('div');
+      sep.className = 'para-gap';
+      boxesWrap.appendChild(sep);
+    }
+  });
+
+  // ---------- link resolution via Flask resolver ----------
+  const resolverBase0 = (document.getElementById('resolver-url-0') || {}).content || '/doc/0';
+  function makeResolverURL(docId){ return resolverBase0.replace(/0$/, String(docId)); }
+
+  function extractDocId(href){
+    if (!href) return null;
+    if (/^\d+$/.test(href)) return parseInt(href, 10);
+    let m = href.match(/\/(?:doc|act|acts|judgment|judgments|tribunal|tribunals|district(?:_court)?|section)\/(\d+)(?:\b|\/|$)/i);
+    if (m) return parseInt(m[1], 10);
+    m = href.match(/[?&](?:doc_id|docId|id)=(\d+)/i);
+    if (m) return parseInt(m[1], 10);
+    m = href.match(/#doc-(\d+)/i);
+    if (m) return parseInt(m[1], 10);
+    m = href.match(/\/(\d+)(?:\.\w+)?$/);
+    if (m) return parseInt(m[1], 10);
+    return null;
+  }
+
+  document.getElementById('boxes').addEventListener('click', function(e){
+    const a = e.target.closest('a');
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (href.startsWith('#')) return;
+
+    const docId = extractDocId(href);
+    if (docId != null){
+      e.preventDefault();
+      window.location.assign(makeResolverURL(docId));
+    }
+  }, true);
+})();
+</script>
+{% endblock %}

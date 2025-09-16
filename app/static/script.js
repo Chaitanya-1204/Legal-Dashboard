@@ -34,14 +34,14 @@ document.addEventListener('DOMContentLoaded', function() {
             description: 'Browse through judgments from various High Courts.',
             logo: `<i class="fas fa-landmark fa-2x"></i>`,
             color: 'green',
-            link: '#'
+            link: '/high_courts/'
         },
         {
             title: 'District Courts',
             description: 'Explore judgments from major district courts.',
             logo: `<i class="fas fa-building-columns fa-2x"></i>`,
             color: 'teal',
-            link: '#'
+            link: '/districtcourt/'
         },
         {
             title: 'Tribunals',

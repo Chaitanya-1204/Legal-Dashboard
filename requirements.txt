@@ -1,4 +1,4 @@
 Flask
 pymongo
 pandas
-python-dotenv
+python-dotenvpython-dotenv

@@ -5,6 +5,7 @@ import re
 from pymongo import MongoClient
 from bs4 import BeautifulSoup
 from datetime import datetime
+from tqdm import tqdm 
 
 # --- CONFIGURATION ---
 MONGO_URI = "mongodb://localhost:27017/"
@@ -65,7 +66,7 @@ def extract_and_populate_links():
     docs_processed = 0
     
     # Use a cursor to iterate through all documents in the 'acts' collection
-    for act_document in source_collection.find({}, {'doc_id': 1, 'content': 1}):
+    for act_document in tqdm(source_collection.find({}, {'doc_id': 1, 'content': 1}) , desc = "Processing : "):
         parent_doc_id = act_document.get('doc_id')
         html_content = act_document.get('content')
 
@@ -101,8 +102,7 @@ def extract_and_populate_links():
                 total_links_found += 1
                 links_in_doc += 1
 
-        if links_in_doc > 0:
-            print(f"   -> Processed doc_id: {parent_doc_id}, found {links_in_doc} links.")
+        
         
         docs_processed += 1
 

@@ -1,0 +1,166 @@
+<!-- app/templates/view_sc_ner.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ judgment.title or ("Judgment " ~ judgment.doc_id) }} — NER View</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; }
+    header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    h1 { font-size: 18px; margin: 0; font-weight: 600; }
+    .muted { color: #666; font-size: 13px; }
+    .toolbar { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+    .btn { border: 1px solid #ddd; padding: 6px 10px; border-radius: 8px; background: #fafafa; cursor: pointer; }
+    .btn[aria-pressed="true"] { background: #eef6ff; border-color: #b3d4ff; }
+    .container { display: grid; grid-template-columns: 260px 1fr; gap: 16px; padding: 16px; }
+    .panel { border-right: 1px solid #eee; padding-right: 12px; }
+    .label-pill { display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #ddd; margin: 3px; font-size: 12px; cursor: pointer; }
+    .label-pill.active { background: #e8f5e9; border-color: #c8e6c9; }
+    .doc { padding: 0 4px; line-height: 1.6; }
+    .doc .ner { border-radius: 4px; padding: 0 2px; border: 1px dashed rgba(0,0,0,.2); }
+    .ner-PERSON { background: #fff3e0; }
+    .ner-ORG { background: #e3f2fd; }
+    .ner-GPE { background: #f1f8e9; }
+    .ner-DATE { background: #fce4ec; }
+    .ner-LAW { background: #ede7f6; }
+    .ner-MONEY { background: #e0f7fa; }
+    .ner-PERCENT { background: #f3e5f5; }
+    .doc.empty { color: #888; font-style: italic; }
+    .filters h3 { margin: 10px 0 6px; font-size: 13px; color: #444; }
+    .filters small { color: #666; }
+    .status { font-size: 12px; color: #444; margin-top: 8px; }
+    .status .bad { color: #c00; }
+    .status .ok { color: #0a0; }
+    @media (max-width: 900px) {
+      .container { grid-template-columns: 1fr; }
+      .panel { border-right: none; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{{ judgment.title or ("Judgment " ~ judgment.doc_id) }}</h1>
+    <div class="muted">Doc ID: {{ judgment.doc_id }}{% if used_selector %} · container: <code>{{ used_selector }}</code>{% endif %}</div>
+    <div class="toolbar">
+      <button class="btn" id="btnRaw" aria-pressed="true">Raw</button>
+      <button class="btn" id="btnNer" aria-pressed="false">NER</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <aside class="panel">
+      <div class="filters">
+        <h3>Entity filters</h3>
+        <div id="labels"></div>
+        <small>Click to toggle. Active labels remain visible.</small>
+        <div class="status" id="status">Ready.</div>
+      </div>
+    </aside>
+
+    <main>
+      <div id="docRaw" class="doc">{{ judgment.content|safe }}</div>
+      <div id="docNer" class="doc empty" hidden>Switching to NER will annotate entities…</div>
+    </main>
+  </div>
+
+  <script>
+    const NER_API = "{{ url_for('judgments.api_ner_html', doc_id=judgment.doc_id) }}";
+    const btnRaw = document.getElementById('btnRaw');
+    const btnNer = document.getElementById('btnNer');
+    const docRaw = document.getElementById('docRaw');
+    const docNer = document.getElementById('docNer');
+    const labelsBox = document.getElementById('labels');
+    const statusEl = document.getElementById('status');
+
+    let nerLoaded = false;
+
+    function setMode(mode) {
+      const isRaw = mode === 'raw';
+      btnRaw.setAttribute('aria-pressed', String(isRaw));
+      btnNer.setAttribute('aria-pressed', String(!isRaw));
+      docRaw.hidden = !isRaw;
+      docNer.hidden = isRaw;
+    }
+
+    function collectLabels() {
+      const set = new Set();
+      docNer.querySelectorAll('span.ner[data-entity]').forEach(s => {
+        set.add(s.getAttribute('data-entity'));
+      });
+      return Array.from(set).sort();
+    }
+
+    function renderLabelFilters(labelList) {
+      labelsBox.innerHTML = '';
+      labelList.forEach(L => {
+        const pill = document.createElement('span');
+        pill.className = 'label-pill active';
+        pill.textContent = L;
+        pill.dataset.label = L;
+        pill.addEventListener('click', () => {
+          pill.classList.toggle('active');
+          applyFilters();
+        });
+        labelsBox.appendChild(pill);
+      });
+    }
+
+    function applyFilters() {
+      const active = new Set(
+        Array.from(labelsBox.querySelectorAll('.label-pill.active')).map(el => el.dataset.label)
+      );
+      docNer.querySelectorAll('span.ner[data-entity]').forEach(s => {
+        const L = s.getAttribute('data-entity');
+        s.style.display = active.size === 0 || active.has(L) ? '' : 'none';
+      });
+      statusEl.innerHTML = `<span class="ok">Filters applied:</span> ${active.size || 'all'} label(s) visible.`;
+    }
+
+    async function ensureNerLoaded() {
+      if (nerLoaded) return;
+      statusEl.textContent = 'Annotating with NER…';
+      try {
+        const res = await fetch(NER_API);
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error((j && j.detail) || j.error || `HTTP ${res.status}`);
+        }
+        const j = await res.json();
+        const html = (j && j.html) ? j.html : '';
+        const mode = j && j.mode ? j.mode : 'unknown';
+        const spanCount = (j && typeof j.span_count === 'number') ? j.span_count : (docNer.querySelectorAll('span.ner').length);
+        if (!html) throw new Error('Empty NER HTML (likely no source HTML).');
+
+        docNer.innerHTML = html;
+        docNer.classList.remove('empty');
+
+        const labels = collectLabels();
+        renderLabelFilters(labels);
+        applyFilters();
+
+        nerLoaded = true;
+
+        if (spanCount === 0) {
+          statusEl.innerHTML = `<span class="bad">No entities found</span> (mode=${mode}). This can happen if models aren’t installed or text has no recognisable entities.`;
+        } else {
+          statusEl.innerHTML = `<span class="ok">NER loaded</span> (mode=${mode}, spans=${spanCount}).`;
+        }
+      } catch (err) {
+        console.error(err);
+        statusEl.innerHTML = `<span class="bad">NER failed:</span> ${err.message}`;
+        docNer.innerHTML = '<div class="empty">NER failed.</div>';
+      }
+    }
+
+    btnRaw.addEventListener('click', () => setMode('raw'));
+    btnNer.addEventListener('click', async () => {
+      await ensureNerLoaded();
+      setMode('ner');
+    });
+
+    // default mode = RAW
+    setMode('raw');
+  </script>
+</body>
+</html>

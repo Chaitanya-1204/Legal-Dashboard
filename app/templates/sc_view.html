@@ -3,40 +3,85 @@
 {% block title %}{{ judgment.title or "Judgment" }} - Legal Dashboard{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='tribunals.css') }}">
 <style>
   /* Layout / base */
   .ds-layout{display:flex;gap:1rem;align-items:flex-start;margin-top:1rem}
-  .ds-aside{position:sticky;top:96px;width:260px;flex:0 0 260px}
-  .ds-card{background:#fff;border:1px solid #e5e7eb;border-radius:.5rem;padding:1rem}
-  .ds-title{font-weight:600;margin-bottom:.5rem}
-  .ds-chip{display:block;width:100%;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #e5e7eb;background:#f9fafb;margin-bottom:.5rem;cursor:pointer;text-align:left}
+  .ds-aside{position:sticky;top:96px;width:280px;flex:0 0 280px}
+  .ds-card{background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:1rem}
+  .ds-title{font-weight:800;margin-bottom:.5rem}
+  .ds-chip{display:block;width:100%;padding:.55rem .9rem;border-radius:.6rem;border:1px solid #e5e7eb;background:#f9fafb;margin-bottom:.5rem;cursor:pointer;text-align:left;font-weight:600}
   .ds-chip[data-active="true"]{outline:1px solid rgba(0,0,0,.05)}
   .ds-controls{display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap}
-  .ds-btn{padding:.375rem .625rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
-  .ds-btn:hover{background:#f9fafb}
+  .ds-btn{padding:.45rem .7rem;border:1px solid #e5e7eb;border-radius:.55rem;background:#fff;cursor:pointer;font-weight:600}
+  .ds-btn:hover{background:#f3f4f6}
   .ds-main{flex:1 1 auto;min-width:0}
   .ds-focus{outline:2px solid rgba(0,0,0,.35);outline-offset:2px}
   .act-content pre{white-space:pre-wrap;word-break:break-word}
-  .ds-prose p{line-height:1.6;margin:0.5rem 0}
-  .ds-prose h1,.ds-prose h2,.ds-prose h3{margin:1rem 0 .5rem}
+  .ds-prose p{line-height:1.75;margin:.65rem 0}
+  .ds-prose h1,.ds-prose h2,.ds-prose h3{margin:1rem 0 .6rem}
   .highlight-section{outline:2px solid rgba(0,0,0,.45);outline-offset:2px}
   @media (max-width:1024px){.ds-layout{flex-direction:column}.ds-aside{position:static;width:100%;flex:none}}
 
+  /* NER on/off + filter */
   .act-content[data-ner="off"] .ner { background: transparent !important; border: none !important; }
   .act-content[data-ner="off"] .ner::after { content: none !important; }
-
   .ner-muted { background: transparent !important; border: none !important; box-shadow: none !important; }
-.ds-ner-panel { margin-top: .5rem; border-top: 1px dashed #e5e7eb; padding-top: .5rem; max-height: 40vh; overflow: auto; }
-.ds-ner-item { display: flex; align-items: center; gap: .5rem; margin: .25rem 0; }
-.ds-ner-item input { accent-color: #3b82f6; }
-.ds-ner-count { margin-left: auto; font-size: .75rem; color: #6b7280; }
+  .ds-ner-panel { margin-top: .5rem; border-top: 1px dashed #e5e7eb; padding-top: .5rem; max-height: 40vh; overflow: auto; }
+  .ds-ner-item { display: flex; align-items: center; gap: .5rem; margin: .25rem 0; }
+  .ds-ner-item input { accent-color: #3b82f6; }
+  .ds-ner-count { margin-left: auto; font-size: .75rem; color: #6b7280; }
 
+  /* theme */
+  :root{
+    --ld-font: ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+    --ld-text: #0f172a;
+    --ld-subtle: #334155;
+    --ld-bg: #fbfbfd;
+    --ld-br: #e5e7eb;
+    --ld-shadow: 0 1px 2px rgba(0,0,0,.04);
+    --ld-shadow-strong: 0 4px 10px rgba(0,0,0,.08);
+    --ld-hover: #f5f7fb;
+    --ld-hl: rgba(96,165,250,.10);
+
+    --ld-active-bg: #f0f7ff;
+    --ld-active-br: #93c5fd;
+    --ld-gap: 18px;
+  }
+  .container{font-family: var(--ld-font)}
+  .ds-prose{font-size:1.02rem;color:var(--ld-text);letter-spacing:.2px}
+  .ds-prose h2{font-weight:800;font-size:1.25rem;letter-spacing:.1px}
+  .ds-prose h3{font-weight:700;font-size:1.1rem}
+
+  /* row cards */
+  .ld-box{
+    background:var(--ld-bg);
+    border:1px solid var(--ld-br);
+    border-radius:14px;
+    padding:16px 18px;
+    margin:var(--ld-gap) 0;
+    box-shadow: var(--ld-shadow);
+    transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, font-weight .12s ease;
+  }
+  .ld-box:hover{background:var(--ld-hover); box-shadow: var(--ld-shadow-strong)}
+  .ld-box h1,.ld-box h2,.ld-box h3{margin-top:.2rem}
+  .ld-box p{margin:.5rem 0}
+  .ld-box ul{margin:.5rem 0 0 1.1rem}
+  .ld-box li{margin:.25rem 0}
+  .ds-highlight.ld-box{ box-shadow: 0 0 0 2px var(--ld-hl) inset, var(--ld-shadow) }
+  .ld-box.ld-active{ background: var(--ld-active-bg); border-color: var(--ld-active-br); box-shadow: 0 0 0 3px rgba(59,130,246,.16), var(--ld-shadow); font-weight:700; }
+
+  /* status toast */
+  .ld-toast{display:none;position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:.6rem .8rem;border-radius:.6rem;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:1000}
+  .ld-toast[data-show="1"]{display:block}
 </style>
 
 <div class="container mx-auto px-4 md:px-6 py-10">
   <div class="mb-8 text-sm text-gray-500">
     <a href="{{ url_for('judgments.years') }}" class="hover:underline">Supreme Court</a>
-    {% if judgment.year %}&gt; <a href="{{ url_for('judgments.list_by_year', year=judgment.year) }}" class="hover:underline">{{ judgment.year }}</a>{% endif %}
+    {% if judgment.year %}
+      &gt; <a href="{{ url_for('judgments.list_by_year', year=judgment.year) }}" class="hover:underline">{{ judgment.year }}</a>
+    {% endif %}
     &gt; <span class="font-semibold">Doc {{ judgment.doc_id }}</span>
   </div>
 
@@ -55,16 +100,78 @@
       {% endif %}
     </div>
   </div>
+
+  {# --- Hidden form to POST current HTML to the summary view (opens next page) --- #}
+  <form id="sum-form" method="post" action="{{ url_for('summary.view_from_html') }}" style="display:none;">
+    <input type="hidden" name="doc_type" value="judgments">
+    <input type="hidden" name="doc_id" value="{{ judgment.doc_id }}">
+    <input type="hidden" name="model" value="gemini-1.5-flash">
+    <input type="hidden" name="target_tokens" value="200">
+    <input type="hidden" name="min_tokens" value="70">
+    <textarea name="html" id="sum-html"></textarea>
+  </form>
 </div>
+
+<div id="ld-toast" class="ld-toast" role="status" aria-live="polite"></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  const toast = document.getElementById('ld-toast');
+  function showToast(msg, ms=3500){ toast.textContent = msg; toast.setAttribute('data-show','1'); setTimeout(()=>toast.removeAttribute('data-show'), ms); }
+
   if (document.querySelector('.ds-layout')) return;
   const contentArea = document.querySelector('.act-content');
   if (!contentArea) return;
 
+  /* --- ASCII-only sanitizer for all text nodes --- */
+  function sanitizeTextNodes(root) {
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      const original = node.nodeValue || "";
+      if (!original.trim()) continue;
+      let s = original.normalize('NFKC');
+      s = s.replace(/[\u200B-\u200D\u2060\uFEFF]/g, '');         // zero-width & BOM
+      s = s.replace(/\u00A0/g, ' ');                             // NBSP -> space
+      s = s.replace(/[\u2018\u2019\u201B\u2032]/g, "'")          // smart quotes
+           .replace(/[\u201C\u201D\u201F\u2033]/g, '"')
+           .replace(/[\u2010-\u2015\u2212]/g, '-')
+           .replace(/\u2026/g, '...');
+      s = s.replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '');            // keep ASCII
+      if (s !== original) node.nodeValue = s;
+    }
+  }
+
+  /* add “row cards” to important blocks */
+  function boxify(){
+    contentArea.querySelectorAll('.ld-box').forEach(el => el.classList.remove('ld-box'));
+    const BLOCK_SEL = 'p, blockquote, li, section, article, div, table, ul, ol, pre, h1, h2, h3, h4, h5, h6';
+    const nodes = Array.from(contentArea.querySelectorAll(BLOCK_SEL));
+    nodes.forEach(el => {
+      if (!el.textContent.trim()) return;
+      const isDirect = (el.parentElement === contentArea);
+      const hasMarker = el.matches('[data-structure]') || el.querySelector?.('[data-structure]');
+      const isHeading = el.matches('h1,h2,h3,h4,h5,h6');
+      if (isDirect || hasMarker || isHeading) el.classList.add('ld-box');
+    });
+    contentArea.querySelectorAll('ul.ld-box, ol.ld-box').forEach(list => {
+      if (list.querySelector('li.ld-box')) list.classList.remove('ld-box');
+    });
+  }
+
+  /* CLICK: toggle bold + accent on a box (multi-select, ignore link clicks) */
+  function enableBoxToggles() {
+    contentArea.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      const box = e.target.closest('.ld-box');
+      if (!box || !contentArea.contains(box)) return;
+      box.classList.toggle('ld-active');
+    });
+  }
+
   /* --- 0) Remove noisy tags from the scraped chunk --- */
-  contentArea.querySelectorAll('script,style,noscript').forEach(n => n.remove());
+  contentArea.querySelectorAll('script,style,link[rel="stylesheet"],noscript').forEach(n => n.remove());
 
   /* --- 1) If a full page was embedded, rescue inner .judgments --- */
   (function rescueIfNeeded() {
@@ -76,27 +183,33 @@ document.addEventListener('DOMContentLoaded', function () {
     contentArea.innerHTML = ""; contentArea.appendChild(frag);
   })();
 
-  /* --- 2) Trim chrome: keep only region spanning first→last annotated block --- */
+  /* --- clean common wrappers inside judgments --- */
+  contentArea.querySelectorAll('.ad_doc, .ad-doc, [class*="ad_doc"]').forEach(n => n.remove());
+  contentArea.querySelectorAll('.doc_citations, .doc-citations, [class*="doc_citations"]').forEach(n => n.remove());
+  contentArea.querySelectorAll('.doc_title, .doc-title, [class*="doc_title"]').forEach(n => n.remove());
+
+  /* sanitize then layout */
+  sanitizeTextNodes(contentArea);
+  boxify(); enableBoxToggles();
+
+  if (!contentArea.querySelector('[data-structure]')) return;
+
+  /* trim to annotated region */
   (function trimToAnnotated() {
     const ann = contentArea.querySelectorAll('[data-structure]');
     if (!ann.length) return;
-    // remove siblings before the top container of first annotated
     let topFirst = ann[0];
     while (topFirst.parentElement && topFirst.parentElement !== contentArea) topFirst = topFirst.parentElement;
     while (topFirst.previousSibling) topFirst.previousSibling.remove();
-    // remove siblings after the bottom container of last annotated
     let topLast = ann[ann.length - 1];
     while (topLast.parentElement && topLast.parentElement !== contentArea) topLast = topLast.parentElement;
     while (topLast.nextSibling) topLast.nextSibling.remove();
-    // drop any direct children without annotations
     Array.from(contentArea.children).forEach(el => {
       if (!el.matches('[data-structure]') && !el.querySelector('[data-structure]')) el.remove();
     });
   })();
 
-  if (!contentArea.querySelector('[data-structure]')) return;
-
-  /* --- 3) Build two-column layout --- */
+  /* two-column layout */
   const parent = contentArea.parentNode;
   const layout = document.createElement('div'); layout.className = 'ds-layout';
   const aside  = document.createElement('aside'); aside.className = 'ds-aside';
@@ -105,39 +218,49 @@ document.addEventListener('DOMContentLoaded', function () {
   layout.appendChild(aside); layout.appendChild(main); main.appendChild(contentArea);
 
   const card = document.createElement('div'); card.className = 'ds-card';
-  const title = document.createElement('div'); title.className = 'ds-title'; title.textContent = 'Navigate by Section';
+  const title = document.createElement('div'); title.className = 'ds-title'; title.textContent = 'Tools';
   const nav = document.createElement('div'); nav.id = 'ds-nav';
   const controls = document.createElement('div'); controls.className = 'ds-controls';
   const clearBtn = document.createElement('button'); clearBtn.className = 'ds-btn'; clearBtn.type = 'button'; clearBtn.textContent = 'Clear';
   controls.appendChild(clearBtn); card.appendChild(title); card.appendChild(nav); card.appendChild(controls); aside.appendChild(card);
 
-  /* --- 4) Discover roles dynamically (order of appearance) --- */
-  const nodes = Array.from(contentArea.querySelectorAll('[data-structure]'));
+  /* roles discovery */
   let byType = Object.create(null), labels = Object.create(null), order = [], chips = new Map();
-  nodes.forEach(el => {
-    const raw = (el.getAttribute('data-structure') || '').trim();
-    if (!raw) return;
-    const key = raw.toLowerCase();
-    (byType[key] ||= []).push(el);
-    if (!(key in labels)) labels[key] = raw;
-    if (!order.includes(key)) order.push(key);
+  function rebuildRoleIndex() {
+    const nodes = Array.from(contentArea.querySelectorAll('[data-structure]'));
+    byType = Object.create(null); labels = Object.create(null); order.length = 0;
+    nodes.forEach(el => {
+      const raw = (el.getAttribute('data-structure') || '').trim();
+      if (!raw) return;
+      const key = raw.toLowerCase();
+      (byType[key] ||= []).push(el);
+      if (!(key in labels)) labels[key] = raw;
+      if (!order.includes(key)) order.push(key);
+    });
+  }
+  rebuildRoleIndex();
+
+  const PALETTE = [
+    'rgba(96,165,250,.18)','rgba(251,191,36,.20)','rgba(167,139,250,.18)',
+    'rgba(52,211,153,.18)','rgba(244,114,182,.18)','rgba(248,113,113,.18)',
+    'rgba(56,189,248,.18)','rgba(250,204,21,.18)','rgba(163,230,53,.18)','rgba(251,113,133,.18)'
+  ];
+  const roleColor = {}; order.forEach((k,i)=> roleColor[k]=PALETTE[i%PALETTE.length]);
+
+  /* summarize button */
+  const summarizeBtn = document.createElement('button');
+  summarizeBtn.className = 'ds-chip';
+  summarizeBtn.type = 'button';
+  summarizeBtn.textContent = 'Summarize →';
+  nav.appendChild(summarizeBtn);
+  summarizeBtn.addEventListener('click', () => {
+    const form = document.getElementById('sum-form');
+    const area = document.getElementById('sum-html');
+    area.value = contentArea.innerHTML;
+    form.submit();
   });
 
-  /* --- 5) Assign distinct colors per role, dynamically --- */
-  const PALETTE = [
-    'rgba(96,165,250,.18)',   // blue
-    'rgba(251,191,36,.20)',   // amber
-    'rgba(167,139,250,.18)',  // violet
-    'rgba(52,211,153,.18)',   // emerald
-    'rgba(244,114,182,.18)',  // pink
-    'rgba(248,113,113,.18)',  // red
-    'rgba(56,189,248,.18)',   // sky
-    'rgba(250,204,21,.18)',   // yellow
-    'rgba(163,230,53,.18)',   // lime
-    'rgba(251,113,133,.18)'   // rose
-  ];
-  const roleColor = {}; order.forEach((k,i) => roleColor[k] = PALETTE[i % PALETTE.length]);
-
+  /* chips for roles */
   const active = new Set();
   function on(key, sc) {
     const chip = chips.get(key);
@@ -171,26 +294,25 @@ document.addEventListener('DOMContentLoaded', function () {
   function clearAll(){ Array.from(active).forEach(k => off(k)); }
   clearBtn.addEventListener('click', clearAll);
 
-  /* --- 6) Render chips for detected roles --- */
   order.forEach(key => {
     const chip = document.createElement('button');
     chip.className = 'ds-chip';
     chip.type = 'button';
-    chip.textContent = labels[key];  // preserve original case (Issue / RespArg / Facts / …)
+    chip.textContent = labels[key];
     chip.setAttribute('data-active','false');
     chip.addEventListener('click', () => toggle(key, true));
     chips.set(key, chip); nav.appendChild(chip);
   });
 
-  /* --- 7) Intercept /doc/<id> links so they open inside your app --- */
+  /* intercept legacy links → resolver */
   contentArea.addEventListener('click', function (event) {
     const a = event.target.closest('a'); if (!a) return;
     const raw = a.getAttribute('href') || '', abs = a.href || '';
     const m = (raw.match(/\/doc\/(\d+)/) || abs.match(/\/doc\/(\d+)/));
-    if (m && m[1]) { event.preventDefault(); window.location.href = `/tribunals/view/${m[1]}`; }
+    if (m && m[1]) { event.preventDefault(); window.location.href = `/doc/${m[1]}`; }
   });
 
-  /* --- 8) Query params: ?highlight= & ?ds=Issue,Facts --- */
+  /* query params: ?highlight & ?ds */
   const params = new URLSearchParams(window.location.search);
   const highlightId = params.get('highlight');
   if (highlightId) {
@@ -206,257 +328,153 @@ document.addEventListener('DOMContentLoaded', function () {
   const dsParam = params.get('ds');
   if (dsParam) dsParam.split(',').map(s => s.trim().toLowerCase()).forEach(k => byType[k] && on(k, false));
 
-
-
-  //   // === NER toggle ===
-  // // 1) initial state & API URL
-  // const DOC_ID = "{{ judgment.doc_id }}";
-  // // If your blueprint is tribunals, change 'judgments.api_ner_html' to 'tribunals.api_ner_html'
-  // const NER_API = "{{ url_for('judgments.api_ner_html', doc_id=judgment.doc_id) }}"; 
-
-  // // start with ner off so CSS doesn’t show anything by default
-  // contentArea.setAttribute('data-ner', 'off');
-  // let RAW_HTML = contentArea.innerHTML;
-  // let NER_HTML = null;
-
-  // // 2) Add a chip under the list
-  // const nerChip = document.createElement('button');
-  // nerChip.className = 'ds-chip';
-  // nerChip.type = 'button';
-  // nerChip.textContent = 'NER';
-  // nerChip.setAttribute('data-active','false');
-  // nav.appendChild(nerChip);
-
-  // // helper to rebuild role index after we swap HTML (so left chips still work)
-  // function rebuildRoleIndex() {
-  //   const nodesNew = Array.from(contentArea.querySelectorAll('[data-structure]'));
-  //   byType = Object.create(null);
-  //   labels = Object.create(null);
-  //   order.length = 0;
-
-  //   nodesNew.forEach(el => {
-  //     const raw = (el.getAttribute('data-structure') || '').trim();
-  //     if (!raw) return;
-  //     const key = raw.toLowerCase();
-  //     (byType[key] ||= []).push(el);
-  //     if (!(key in labels)) labels[key] = raw;
-  //     if (!order.includes(key)) order.push(key);
-  //   });
-  // }
-
-  // // 3) Toggle handler
-  // nerChip.addEventListener('click', async () => {
-  //   const isOn = nerChip.getAttribute('data-active') === 'true';
-
-  //   if (!isOn) {
-  //     try {
-  //       if (!NER_HTML) {
-  //         nerChip.disabled = true;
-  //         nerChip.textContent = 'NER (loading...)';
-  //         const res = await fetch(NER_API, { headers: { 'Accept': 'application/json' }});
-  //         const data = await res.json();
-  //         if (!res.ok || !data.html) throw new Error(data.error || 'NER API failed');
-  //         NER_HTML = data.html;
-  //       }
-  //       // swap in annotated content
-  //       contentArea.innerHTML = NER_HTML;
-  //       contentArea.setAttribute('data-ner', 'on');
-  //       nerChip.setAttribute('data-active','true');
-
-  //       // keep your left chips functional by re-indexing roles
-  //       rebuildRoleIndex();
-
-  //       // re-bind your internal link interceptor (since we replaced innerHTML)
-  //       contentArea.addEventListener('click', function (event) {
-  //         const a = event.target.closest('a'); if (!a) return;
-  //         const raw = a.getAttribute('href') || '', abs = a.href || '';
-  //         const m = (raw.match(/\/doc\/(\d+)/) || abs.match(/\/doc\/(\d+)/));
-  //         if (m && m[1]) { event.preventDefault(); window.location.href = `/tribunals/view/${m[1]}`; }
-  //       });
-
-  //     } catch (e) {
-  //       console.error('[NER] toggle failed', e);
-  //       alert('Failed to load NER. Check server logs.');
-  //     } finally {
-  //       nerChip.disabled = false;
-  //       nerChip.textContent = 'NER';
-  //     }
-  //   } else {
-  //     // turn OFF: restore raw HTML
-  //     contentArea.innerHTML = RAW_HTML;
-  //     contentArea.setAttribute('data-ner', 'off');
-  //     nerChip.setAttribute('data-active','false');
-  //     rebuildRoleIndex();
-  //   }
-  // });
-
   // === NER toggle with filter checkboxes ===
-const DOC_ID = "{{ judgment.doc_id }}";
-// If your API is on another blueprint, change 'judgments.api_ner_html' below.
-const NER_API = "{{ url_for('judgments.api_ner_html', doc_id=judgment.doc_id) }}";
+  const NER_API = "{{ url_for('judgments.api_ner_html', doc_id=judgment.doc_id) }}";
+  let RAW_HTML = contentArea.innerHTML;
+  let NER_HTML = null;
 
-contentArea.setAttribute('data-ner', 'off');
-let RAW_HTML = contentArea.innerHTML;
-let NER_HTML = null;
+  // state for entity filtering
+  let activeLabels = new Set();
+  let labelIndex  = new Map();
+  let nerPanelBuilt = false;
 
-// state for entity filtering
-let activeLabels = new Set();          // selected labels
-let labelIndex  = new Map();           // label -> [DOM spans]
-let nerPanelBuilt = false;
+  const nerChip = document.createElement('button');
+  nerChip.className = 'ds-chip';
+  nerChip.type = 'button';
+  nerChip.textContent = 'NER';
+  nerChip.setAttribute('data-active','false');
+  nav.appendChild(nerChip);
 
-// create the NER chip
-const nerChip = document.createElement('button');
-nerChip.className = 'ds-chip';
-nerChip.type = 'button';
-nerChip.textContent = 'NER';
-nerChip.setAttribute('data-active','false');
-nav.appendChild(nerChip);
+  const nerPanel = document.createElement('div');
+  nerPanel.className = 'ds-ner-panel';
+  nerPanel.style.display = 'none';
+  nav.appendChild(nerPanel);
 
-// a panel under NER to hold checkboxes
-const nerPanel = document.createElement('div');
-nerPanel.className = 'ds-ner-panel';
-nerPanel.style.display = 'none';
-nav.appendChild(nerPanel);
+  function indexEntities() {
+    labelIndex.clear();
+    contentArea.querySelectorAll('.ner').forEach(span => {
+      const lab = (span.getAttribute('data-entity') || '').toUpperCase();
+      if (!lab) return;
+      if (!labelIndex.has(lab)) labelIndex.set(lab, []);
+      labelIndex.get(lab).push(span);
+    });
+  }
 
-// build/refresh index of entities found in the content
-function indexEntities() {
-  labelIndex.clear();
-  contentArea.querySelectorAll('.ner').forEach(span => {
-    const lab = (span.getAttribute('data-entity') || '').toUpperCase();
-    if (!lab) return;
-    if (!labelIndex.has(lab)) labelIndex.set(lab, []);
-    labelIndex.get(lab).push(span);
-  });
-}
+  function buildNerPanel() {
+    nerPanel.innerHTML = '';
+    const ctrlRow = document.createElement('div');
+    ctrlRow.className = 'ds-controls';
+    const allBtn  = document.createElement('button'); allBtn.className = 'ds-btn'; allBtn.textContent = 'All';
+    const noneBtn = document.createElement('button'); noneBtn.className = 'ds-btn'; noneBtn.textContent = 'None';
+    ctrlRow.appendChild(allBtn); ctrlRow.appendChild(noneBtn);
+    nerPanel.appendChild(ctrlRow);
 
-// build the checkbox UI (once)
-function buildNerPanel() {
-  nerPanel.innerHTML = '';
+    const entries = Array.from(labelIndex.entries()).sort((a,b) => b[1].length - a[1].length);
+    entries.forEach(([label, nodes]) => {
+      const row = document.createElement('label');
+      row.className = 'ds-ner-item';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.value = label; cb.checked = false;
+      const name = document.createElement('span'); name.textContent = label;
+      const count = document.createElement('span'); count.className = 'ds-ner-count'; count.textContent = nodes.length;
+      row.appendChild(cb); row.appendChild(name); row.appendChild(count);
+      nerPanel.appendChild(row);
 
-  // All / None controls
-  const ctrlRow = document.createElement('div');
-  ctrlRow.className = 'ds-controls';
-  const allBtn  = document.createElement('button'); allBtn.className = 'ds-btn'; allBtn.textContent = 'All';
-  const noneBtn = document.createElement('button'); noneBtn.className = 'ds-btn'; noneBtn.textContent = 'None';
-  ctrlRow.appendChild(allBtn); ctrlRow.appendChild(noneBtn);
-  nerPanel.appendChild(ctrlRow);
+      cb.addEventListener('change', () => {
+        if (cb.checked) activeLabels.add(label); else activeLabels.delete(label);
+        applyNerFilter();
+      });
+    });
 
-  // labels sorted by frequency
-  const entries = Array.from(labelIndex.entries()).sort((a,b) => b[1].length - a[1].length);
-  entries.forEach(([label, nodes]) => {
-    const row = document.createElement('label');
-    row.className = 'ds-ner-item';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.value = label; cb.checked = false;
-    const name = document.createElement('span'); name.textContent = label;
-    const count = document.createElement('span'); count.className = 'ds-ner-count'; count.textContent = nodes.length;
-    row.appendChild(cb); row.appendChild(name); row.appendChild(count);
-    nerPanel.appendChild(row);
-
-    cb.addEventListener('change', () => {
-      if (cb.checked) activeLabels.add(label); else activeLabels.delete(label);
+    allBtn.addEventListener('click', () => {
+      activeLabels = new Set(Array.from(labelIndex.keys()));
+      nerPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
       applyNerFilter();
     });
-  });
-
-  allBtn.addEventListener('click', () => {
-    activeLabels = new Set(Array.from(labelIndex.keys()));
-    nerPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
-    applyNerFilter();
-  });
-  noneBtn.addEventListener('click', () => {
-    activeLabels.clear();
-    nerPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-    applyNerFilter();
-  });
-
-  nerPanelBuilt = true;
-}
-
-// apply the filter: mute all, then unmute selected labels
-function applyNerFilter() {
-  contentArea.querySelectorAll('.ner').forEach(span => span.classList.add('ner-muted'));
-  activeLabels.forEach(label => {
-    (labelIndex.get(label) || []).forEach(span => span.classList.remove('ner-muted'));
-  });
-}
-
-// keep your existing helper
-function rebuildRoleIndex() {
-  const nodesNew = Array.from(contentArea.querySelectorAll('[data-structure]'));
-  byType = Object.create(null);
-  labels = Object.create(null);
-  order.length = 0;
-
-  nodesNew.forEach(el => {
-    const raw = (el.getAttribute('data-structure') || '').trim();
-    if (!raw) return;
-    const key = raw.toLowerCase();
-    (byType[key] ||= []).push(el);
-    if (!(key in labels)) labels[key] = raw;
-    if (!order.includes(key)) order.push(key);
-  });
-}
-
-// main toggle
-nerChip.addEventListener('click', async () => {
-  const isOn = nerChip.getAttribute('data-active') === 'true';
-
-  if (!isOn) {
-    try {
-      if (!NER_HTML) {
-        nerChip.disabled = true;
-        nerChip.textContent = 'NER (loading...)';
-        const res = await fetch(NER_API, { headers: { 'Accept': 'application/json' }});
-        const data = await res.json();
-        if (!res.ok || !data.html) throw new Error(data.error || 'NER API failed');
-        NER_HTML = data.html;
-      }
-
-      // swap NER HTML in
-      contentArea.innerHTML = NER_HTML;
-      contentArea.setAttribute('data-ner', 'on');
-      nerChip.setAttribute('data-active','true');
-
-      // re-index roles and entities
-      rebuildRoleIndex();
-      indexEntities();
-
-      // show / (re)build the panel
-      if (!nerPanelBuilt) buildNerPanel();
-      nerPanel.style.display = 'block';
-
-      // default to "none selected" (everything muted)
+    noneBtn.addEventListener('click', () => {
       activeLabels.clear();
       nerPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
       applyNerFilter();
+    });
 
-      // re-bind your link interceptor (DOM was replaced)
-      contentArea.addEventListener('click', function (event) {
-        const a = event.target.closest('a'); if (!a) return;
-        const raw = a.getAttribute('href') || '', abs = a.href || '';
-        const m = (raw.match(/\/doc\/(\d+)/) || abs.match(/\/doc\/(\d+)/));
-        if (m && m[1]) { event.preventDefault(); window.location.href = `/tribunals/view/${m[1]}`; }
-      });
-
-    } catch (e) {
-      console.error('[NER] toggle failed', e);
-      alert('Failed to load NER. Check server logs.');
-    } finally {
-      nerChip.disabled = false;
-      nerChip.textContent = 'NER';
-    }
-  } else {
-    // turn OFF: restore raw HTML and hide panel
-    contentArea.innerHTML = RAW_HTML;
-    contentArea.setAttribute('data-ner', 'off');
-    nerChip.setAttribute('data-active','false');
-    nerPanel.style.display = 'none';
-    rebuildRoleIndex();
+    nerPanelBuilt = true;
   }
-});
 
+  function applyNerFilter() {
+    contentArea.querySelectorAll('.ner').forEach(span => span.classList.add('ner-muted'));
+    activeLabels.forEach(label => (labelIndex.get(label) || []).forEach(span => span.classList.remove('ner-muted')));
+  }
 
+  nerChip.addEventListener('click', async () => {
+    const isOn = nerChip.getAttribute('data-active') === 'true';
+
+    if (!isOn) {
+      try {
+        if (!NER_HTML) {
+          nerChip.disabled = true;
+          nerChip.textContent = 'NER (loading...)';
+          const res = await fetch(NER_API, { headers: { 'Accept': 'application/json' }});
+          const payload = await res.json().catch(() => ({}));
+          if (res.status === 429) {
+            const retryAfter = (payload && (payload.retry_after || payload.detail)) || 30;
+            showToast(`Rate limited by NER. Try again in ~${retryAfter}s.`);
+            throw new Error('429 rate limited');
+          }
+          if (!res.ok || !payload || !payload.html) {
+            const detail = (payload && (payload.error || payload.detail)) || `HTTP ${res.status}`;
+            showToast(`NER failed: ${detail}`);
+            throw new Error(detail);
+          }
+          NER_HTML = payload.html;
+        }
+
+        // swap NER HTML in
+        contentArea.innerHTML = NER_HTML;
+
+        // sanitize NER HTML to English/ASCII
+        sanitizeTextNodes(contentArea);
+
+        // strip unwanted bits if any slipped back
+        contentArea.querySelectorAll('.ad_doc, .ad-doc, [class*="ad_doc"]').forEach(n => n.remove());
+
+        // re-BOXIFY so NER view keeps the same look + click toggles work
+        boxify();
+
+        contentArea.setAttribute('data-ner', 'on');
+        nerChip.setAttribute('data-active','true');
+
+        // re-index roles and entities
+        rebuildRoleIndex();
+        indexEntities();
+
+        if (!nerPanelBuilt) buildNerPanel();
+        nerPanel.style.display = 'block';
+
+        // default to "none selected" (everything muted)
+        activeLabels.clear();
+        nerPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        applyNerFilter();
+
+      } catch (e) {
+        console.error('[NER] toggle failed', e);
+      } finally {
+        nerChip.disabled = false;
+        nerChip.textContent = 'NER';
+      }
+    } else {
+      // turn OFF: restore raw HTML and hide panel
+      contentArea.innerHTML = RAW_HTML;
+
+      // sanitize raw again and keep boxes
+      sanitizeTextNodes(contentArea);
+      boxify();
+
+      contentArea.setAttribute('data-ner', 'off');
+      nerChip.setAttribute('data-active','false');
+      nerPanel.style.display = 'none';
+      rebuildRoleIndex();
+    }
+  });
 
 });
 </script>

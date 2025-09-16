@@ -1,0 +1,33 @@
+
+
+{% extends "base.html" %}
+
+{% block title %}Years for {{ category_name }} - Legal Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 md:px-6 py-10">
+  <div class="mb-6 text-sm text-gray-500">
+    <a href="{{ url_for('districtcourt.show_categories') }}" class="hover:underline">Categories</a> &gt;
+    <span class="font-semibold">{{ category_name }}</span>
+  </div>
+
+  <h1 class="text-3xl font-bold text-gray-900 mb-2">Years for {{ category_name }}</h1>
+  <p class="text-gray-600 mb-8">Choose a year to see all tribunals.</p>
+
+  {% if years %}
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+      {% for year in years %}
+        <a href="{{ url_for('districtcourt.list_by_year', category_name=category_name, year=year) }}"
+           class="block text-center bg-white border border-gray-300 rounded-md p-5 shadow-sm hover:shadow-md hover:border-blue-500 transition duration-150 text-lg font-semibold text-gray-800">
+          {{ year }}
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="bg-white p-8 rounded-lg shadow text-center">
+      <h2 class="text-xl font-semibold text-gray-700">No years found</h2>
+      <p class="text-gray-500 mt-2">There are no entries for this tribunal yet.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

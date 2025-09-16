@@ -1,21 +1,35 @@
 #!/usr/bin/env python3
 """
-Populate MongoDB: legal_dashboard_db.judgments (simple & readable)
+Supreme Court Judgments -> MongoDB (same schema/keys as `tribunals`)
 
-Flow:
-  1) (optional) DROP or CLEAR the 'judgments' collection
-  2) Import rows from CSV (upsert by doc_id, normalize headers)
-  3) Backfill content_html from local HTML files
+CSV:
+  /DATACHAI/Data/Judments/Supreme_Court/supreme_court_logs_enriched.csv
+HTML root (year-wise folders, files named <doc_id>.html|.htm):
+  /DATACHAI/Data/Judments/Supreme_Court/<YEAR>/<doc_id>.html
+
+MongoDB (legal_dashboard_db.judgments) document:
+{
+  doc_id: int,
+  full_title: str,            # from CSV
+  category: "judgments",      # constant
+  category_name: "Supreme_Court",
+  year: int,
+  law_type: "judgment",
+  word_count: int,
+  content: str                # full HTML
+}
 """
 
 import os
-import csv
 import re
+import csv
 from pathlib import Path
-from typing import Dict, Any, Optional
-from pymongo import MongoClient, ASCENDING, TEXT
+from typing import Optional, Tuple, Dict, Any, List
+from html import unescape
 
-# ========= CONFIG (edit these) =========
+from pymongo import MongoClient, ASCENDING
+
+# ===== CONFIG =====
 CSV_PATH   = "/DATACHAI/Data/Judments/Supreme_Court/supreme_court_logs_enriched.csv"
 DOC_ROOT   = "/DATACHAI/Data/Judments/Supreme_Court"
 
@@ -23,45 +37,16 @@ MONGO_URI  = "mongodb://localhost:27017/"
 DB_NAME    = "legal_dashboard_db"
 COLL_NAME  = "judgments"
 
-# choose ONE of these behaviors:
-DROP_COLLECTION  = True    # drop the collection (removes docs + indexes)
-CLEAR_COLLECTION = False   # OR: delete documents but keep indexes
-# ======================================
+DROP_COLLECTION  = True    # drop collection & indexes, rebuild from scratch
+CLEAR_COLLECTION = False   # alternative: clear docs, keep indexes
 
+MAX_HTML_BYTES = 15_000_000
 FALLBACK_ENCODINGS = ["utf-8-sig", "utf-8", "cp1252", "latin-1"]
-MAX_BYTES = 14_000_000  # stay under Mongo's ~16MB
+CATEGORY_NAME = "Supreme_Court"
+# ==================
 
-# ---------- small helpers ----------
 
-def snake(s: str) -> str:
-    """Convert header names to snake_case."""
-    s = s.strip().replace(" ", "_")
-    s = re.sub(r"[^0-9a-zA-Z_]+", "_", s)
-    s = re.sub(r"_+", "_", s).strip("_")
-    return s.lower()
-
-def to_int_or_none(v: Optional[str]):
-    if v is None: return None
-    v = v.strip()
-    if v == "": return None
-    try:
-        return int(v)
-    except:
-        return v
-
-def normalize_row(row: Dict[str, str]) -> Dict[str, Any]:
-    """Normalize CSV field names + cast common ints."""
-    out: Dict[str, Any] = {}
-    for k, v in row.items():
-        nk = snake(k)
-        out[nk] = v.strip() if isinstance(v, str) else v
-    if "year" in out:  out["year"]  = to_int_or_none(out["year"])
-    if "month" in out: out["month"] = to_int_or_none(out["month"])
-    if "day" in out:   out["day"]   = to_int_or_none(out["day"])
-    return out
-
-def read_text_file(p: Path):
-    """Read a file with encoding fallbacks; return (text, encoding) or (None, None)."""
+def read_text_file(p: Path) -> Tuple[Optional[str], Optional[str]]:
     for enc in FALLBACK_ENCODINGS:
         try:
             return p.read_text(encoding=enc, errors="replace"), enc
@@ -71,185 +56,143 @@ def read_text_file(p: Path):
             break
     return None, None
 
-def build_html_index(root: Path) -> Dict[str, Path]:
-    """
-    One-time index: {doc_id -> full path of .html/.htm}
-    Prefer .html over .htm when both exist.
-    """
-    print(f"🔎 Indexing HTML under: {root}")
-    idx: Dict[str, Path] = {}
-    scanned = 0
-    for p in root.rglob("*"):
-        if not p.is_file():
-            continue
-        suf = p.suffix.lower()
-        if suf not in (".html", ".htm"):
-            continue
-        stem = p.stem  # we assume filename like 12345.html where 12345 == doc_id
-        prev = idx.get(stem)
-        if prev is None or (suf == ".html" and prev.suffix.lower() == ".htm"):
-            idx[stem] = p.resolve()
-        scanned += 1
-        if scanned % 5000 == 0:
-            print(f"  ...indexed {scanned} files")
-    print(f"✅ HTML index ready: {len(idx)} doc_ids mapped")
-    return idx
 
-# ---------- main steps ----------
+def html_to_text(html: str) -> str:
+    html = re.sub(r"(?is)<script[^>]*>.*?</script>", " ", html)
+    html = re.sub(r"(?is)<style[^>]*>.*?</style>", " ", html)
+    html = re.sub(r"(?s)<[^>]+>", " ", html)
+    txt = unescape(html)
+    txt = re.sub(r"\s+", " ", txt).strip()
+    return txt
+
+
+
+def word_count_from_html(html: str) -> int:
+    return len(re.findall(r"\b\w+\b", html_to_text(html)))
+
+def load_csv_rows(csv_path: Path) -> List[Dict[str, str]]:
+    rows: List[Dict[str, str]] = []
+    for enc in FALLBACK_ENCODINGS:
+        try:
+            with open(csv_path, newline="", encoding=enc, errors="replace") as f:
+                reader = csv.DictReader(f)
+                for r in reader:
+                    rows.append({
+                        "year":   (r.get("year")   or r.get("Year")   or "").strip(),
+                        "doc_id": (r.get("doc_id") or r.get("Doc_id") or r.get("id") or "").strip(),
+                        "title":  (r.get("title")  or r.get("Title")  or r.get("full_title") or "").strip(),
+                    })
+            break
+        except UnicodeDecodeError:
+            continue
+    return [r for r in rows if r["year"] and r["doc_id"] and r["title"]]
+
 
 def connect_collection():
     client = MongoClient(MONGO_URI)
     db = client[DB_NAME]
     col = db[COLL_NAME]
-    # quick ping
     client.admin.command("ping")
     return client, col
 
+
 def drop_or_clear(col):
     if DROP_COLLECTION:
-        print(f"🗑️  Dropping {DB_NAME}.{COLL_NAME} ...")
+        print(f"🗑️  Dropping {DB_NAME}.{COLL_NAME} …")
         col.drop()
-        print("   dropped.")
     elif CLEAR_COLLECTION:
-        print(f"🧹 Clearing documents in {DB_NAME}.{COLL_NAME} ...")
+        print(f"🧹 Clearing {DB_NAME}.{COLL_NAME} …")
         res = col.delete_many({})
         print(f"   removed {res.deleted_count} docs.")
     else:
-        print("🚫 Drop/Clear: skipped (edit flags at top if you want a clean start)")
+        print("🚫 Drop/Clear: skipped")
+
 
 def ensure_indexes(col):
-    print("📚 Ensuring indexes ...")
+    print("📚 Ensuring indexes …")
     col.create_index([("doc_id", ASCENDING)], unique=True, name="doc_id_unique")
     col.create_index([("year", ASCENDING)], name="year_idx")
-    col.create_index([("title", TEXT)], name="title_text_idx")
 
-def import_csv(col):
-    print(f"📥 Importing CSV: {CSV_PATH}")
-    imported = 0
-    missing_docid = 0
 
-    for enc in FALLBACK_ENCODINGS:
-        try:
-            with open(CSV_PATH, newline="", encoding=enc, errors="replace") as f:
-                reader = csv.DictReader(f)
-                for raw in reader:
-                    row = normalize_row(raw)
-                    doc_id = row.get("doc_id")
-                    title = row.get("title") or row.get("case_title") or row.get("full_title")
-
-                    if not doc_id:
-                        missing_docid += 1
-                        continue
-
-                    # clean empty strings to None
-                    for k in list(row.keys()):
-                        if isinstance(row[k], str) and row[k].strip() == "":
-                            row[k] = None
-                    if title:
-                        row["title"] = title
-
-                    col.update_one({"doc_id": str(doc_id)}, {"$set": row}, upsert=True)
-                    imported += 1
-            print(f"   ✅ OK with encoding={enc}")
-            break
-        except UnicodeDecodeError:
-            continue
-
-    print(f"   → upserted: {imported} rows (skipped without doc_id: {missing_docid})")
-
-def backfill_html(col):
-    print(f"🧩 Backfilling HTML from: {DOC_ROOT}")
+def ingest():
+    csv_path = Path(CSV_PATH).resolve()
+    if not csv_path.exists():
+        print(f"❌ CSV not found: {csv_path}")
+        return
     root = Path(DOC_ROOT).resolve()
     if not root.exists():
-        print(f"   ❌ doc-root not found: {root}")
+        print(f"❌ DOC_ROOT not found: {root}")
         return
 
-    html_idx = build_html_index(root)
-
-    total = col.count_documents({})
-    missing_before = col.count_documents({"content_html": {"$exists": False}})
-    print(f"   before: missing={missing_before} / total={total}")
-
-    processed = updated = skipped = 0
-
-    cursor = col.find(
-        {"content_html": {"$exists": False}},
-        {"_id": 0, "doc_id": 1, "path": 1, "html_path": 1}
-    )
-
-    for doc in cursor:
-        processed += 1
-        did = str(doc.get("doc_id") or "")
-        if not did:
-            skipped += 1
-            continue
-
-        html = None
-        enc_used = None
-        src = None
-
-        # 1) try explicit relative/absolute path from CSV (path/html_path)
-        pval = doc.get("path") or doc.get("html_path")
-        if pval:
-            p = Path(pval)
-            if not p.is_absolute():
-                p = root / p
-            if p.exists() and p.is_file() and p.suffix.lower() in (".html", ".htm"):
-                html, enc_used = read_text_file(p)
-                if html:
-                    src = {"kind": "file", "path": str(p)}
-
-        # 2) fallback: index lookup by doc_id -> {doc_id}.html/htm
-        if html is None:
-            p = html_idx.get(did)
-            if p and p.exists():
-                html, enc_used = read_text_file(p)
-                if html:
-                    src = {"kind": "file", "path": str(p)}
-
-        if html is None:
-            skipped += 1
-            continue
-
-        # keep under Mongo size limit
-        if len(html.encode("utf-8", errors="replace")) > MAX_BYTES:
-            skipped += 1
-            continue
-
-        col.update_one(
-            {"doc_id": did},
-            {"$set": {
-                "content_html": html,
-                "content_meta": {"source": src, "encoding": enc_used}
-            }},
-            upsert=False
-        )
-        updated += 1
-
-        if processed % 2000 == 0:
-            print(f"   progress: processed={processed}, updated={updated}, skipped={skipped}")
-
-    missing_after = col.count_documents({"content_html": {"$exists": False}})
-    print(f"   done: processed={processed}, updated={updated}, skipped={skipped}")
-    print(f"   after : missing={missing_after} / total={total}")
-
-def main():
-    print("=== Populate judgments (simple) ===")
     client, col = connect_collection()
-
     try:
         drop_or_clear(col)
         ensure_indexes(col)
-        import_csv(col)
-        backfill_html(col)
 
+        rows = load_csv_rows(csv_path)
+        if not rows:
+            print("⚠️  CSV empty or missing required headers (year, doc_id, title).")
+            return
+
+        matched = unmatched = 0
+
+        for row in rows:
+            try:
+                year_int = int(row["year"])
+                doc_id_int = int(row["doc_id"])
+            except Exception:
+                unmatched += 1
+                continue
+
+            year_dir = root / str(year_int)
+            if not (year_dir.exists() and year_dir.is_dir()):
+                unmatched += 1
+                continue
+
+            # Look for <doc_id>.html or <doc_id>.htm
+            p_html = year_dir / f"{doc_id_int}.html"
+            p_htm  = year_dir / f"{doc_id_int}.htm"
+            p = p_html if p_html.exists() else (p_htm if p_htm.exists() else None)
+            if not p:
+                unmatched += 1
+                continue
+
+            html, enc = read_text_file(p)
+            if not html:
+                unmatched += 1
+                continue
+
+            html_bytes = len(html.encode("utf-8", errors="replace"))
+            if html_bytes > MAX_HTML_BYTES:
+                print(f"   🚫 too big, skipping: {p} ({html_bytes} bytes)")
+                unmatched += 1
+                continue
+
+            document_to_insert = {
+                "doc_id": doc_id_int,
+                "full_title": row["title"],
+                "category": "judgments",
+                "category_name": CATEGORY_NAME,
+                "year": year_int,
+                "law_type": "judgment",
+                "word_count": word_count_from_html(html),
+                "content": html
+            }
+
+            col.update_one(
+                {"doc_id": document_to_insert["doc_id"]},
+                {"$set": document_to_insert},
+                upsert=True
+            )
+            matched += 1
+
+        print(f"✅ {CATEGORY_NAME}: matched={matched}, unmatched={unmatched}")
         total = col.count_documents({})
-        have  = col.count_documents({"content_html": {"$exists": True}})
-        miss  = col.count_documents({"content_html": {"$exists": False}})
-        print({"total": total, "with_content_html": have, "missing": miss})
+        print({"total_docs_in_collection": total})
     finally:
         client.close()
         print("✅ MongoDB connection closed.")
 
+
 if __name__ == "__main__":
-    main()
+    ingest()

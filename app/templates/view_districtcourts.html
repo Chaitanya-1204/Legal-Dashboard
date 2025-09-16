@@ -1,26 +1,26 @@
-{# app/templates/view_tribunals.html #}
+{# app/templates/view_districtcourts.html #}
 {% extends "base.html" %}
-{% block title %}{{ tribunals.full_title }} - Legal Dashboard{% endblock %}
+{% block title %}{{ doc.full_title or doc.title or ("Doc " ~ doc.doc_id) }} - Legal Dashboard{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='tribunals.css') }}">
 
 <style>
-  /* existing layout bits (unchanged) */
+  /* Layout / base */
   .ds-layout{display:flex;gap:1rem;align-items:flex-start;margin-top:1rem}
   .ds-aside{position:sticky;top:96px;width:260px;flex:0 0 260px}
-  .ds-card{background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:1rem}
-  .ds-title{font-weight:700;margin-bottom:.5rem}
-  .ds-chip{display:block;width:100%;padding:.55rem .9rem;border-radius:.6rem;border:1px solid #e5e7eb;background:#f9fafb;margin-bottom:.5rem;cursor:pointer;text-align:left;font-weight:600}
+  .ds-card{background:#fff;border:1px solid #e5e7eb;border-radius:.5rem;padding:1rem}
+  .ds-title{font-weight:600;margin-bottom:.5rem}
+  .ds-chip{display:block;width:100%;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #e5e7eb;background:#f9fafb;margin-bottom:.5rem;cursor:pointer;text-align:left}
   .ds-chip[data-active="true"]{outline:1px solid rgba(0,0,0,.05)}
   .ds-controls{display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap}
-  .ds-btn{padding:.45rem .7rem;border:1px solid #e5e7eb;border-radius:.55rem;background:#fff;cursor:pointer;font-weight:600}
-  .ds-btn:hover{background:#f3f4f6}
+  .ds-btn{padding:.375rem .625rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
+  .ds-btn:hover{background:#f9fafb}
   .ds-main{flex:1 1 auto;min-width:0}
   .ds-focus{outline:2px solid rgba(0,0,0,.35);outline-offset:2px}
   .act-content pre{white-space:pre-wrap;word-break:break-word}
-  .ds-prose p{line-height:1.75;margin:.65rem 0}
-  .ds-prose h1,.ds-prose h2,.ds-prose h3{margin:1rem 0 .6rem}
+  .ds-prose p{line-height:1.6;margin:0.5rem 0}
+  .ds-prose h1,.ds-prose h2,.ds-prose h3{margin:1rem 0 .5rem}
   .highlight-section{outline:2px solid rgba(0,0,0,.45);outline-offset:2px}
   @media (max-width:1024px){.ds-layout{flex-direction:column}.ds-aside{position:static;width:100%;flex:none}}
 
@@ -32,84 +32,25 @@
   .ds-ner-item { display: flex; align-items: center; gap: .5rem; margin: .25rem 0; }
   .ds-ner-item input { accent-color: #3b82f6; }
   .ds-ner-count { margin-left: auto; font-size: .75rem; color: #6b7280; }
-
-  /* —— tasteful type + box styling —— */
-  :root{
-    --ld-font: ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
-    --ld-text: #0f172a;            /* slate-900 */
-    --ld-subtle: #334155;          /* slate-700 */
-    --ld-bg: #fbfbfd;              /* very light card bg */
-    --ld-br: #e5e7eb;              /* border */
-    --ld-shadow: 0 1px 2px rgba(0,0,0,.04);
-    --ld-shadow-strong: 0 4px 10px rgba(0,0,0,.08);
-    --ld-hover: #f5f7fb;
-    --ld-hl: rgba(96,165,250,.10);
-
-    --ld-active-bg: #f0f7ff;      /* active box bg */
-    --ld-active-br: #93c5fd;      /* active border */
-    --ld-gap: 18px;               /* space between boxes */
-  }
-  .container{font-family: var(--ld-font)}
-  .ds-prose{font-size:1.02rem;color:var(--ld-text);letter-spacing:.2px}
-  .ds-prose h2{font-weight:800;font-size:1.25rem;letter-spacing:.1px}
-  .ds-prose h3{font-weight:700;font-size:1.1rem}
-
-  /* one clean card per “row” */
-  .ld-box{
-    background:var(--ld-bg);
-    border:1px solid var(--ld-br);
-    border-radius:14px;
-    padding:16px 18px;
-    margin:var(--ld-gap) 0;              /* a bit more spacing between boxes */
-    box-shadow: var(--ld-shadow);
-    transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, font-weight .12s ease;
-  }
-  .ld-box:hover{background:var(--ld-hover); box-shadow: var(--ld-shadow-strong)}
-
-  .ld-box h1,.ld-box h2,.ld-box h3{margin-top:.2rem}
-  .ld-box p{margin:.5rem 0}
-  .ld-box ul{margin:.5rem 0 0 1.1rem}
-  .ld-box li{margin:.25rem 0}
-
-  /* roles highlight ring inside box */
-  .ds-highlight.ld-box{ box-shadow: 0 0 0 2px var(--ld-hl) inset, var(--ld-shadow) }
-
-  /* CLICK TOGGLE: stronger border/bg + bold text */
-  .ld-box.ld-active{
-    background: var(--ld-active-bg);
-    border-color: var(--ld-active-br);
-    box-shadow: 0 0 0 3px rgba(59,130,246,.16), var(--ld-shadow);
-    font-weight: 700; /* bolden content while active */
-  }
 </style>
 
 <div class="container mx-auto px-4 md:px-6 py-10">
   <div class="bg-white p-6 md:p-8 rounded-lg shadow-md">
     <h1 class="text-2xl md:text-3xl font-bold text-gray-900 border-b pb-4 mb-4">
-      {{ tribunals.full_title }}
+      {{ doc.full_title or doc.title or ("Doc " ~ doc.doc_id) }}
     </h1>
 
     <div class="text-gray-600 mb-6 text-sm">
-      <span class="font-semibold">Year:</span> {{ tribunals.year }} |
-      <span class="font-semibold">Tribunal:</span> {{ tribunals.category_name }} |
-      <span class="font-semibold">Law Type:</span> {{ tribunals.law_type }}
+      <span class="font-semibold">Year:</span> {{ doc.year }} |
+      <span class="font-semibold">Court:</span> {{ doc.category_name }} |
+      <span class="font-semibold">Law Type:</span> {{ doc.law_type }}
     </div>
 
     <div class="act-content ds-prose">
-      {{ tribunals.content | safe }}
+      {{ doc.content | safe }}
     </div>
   </div>
 </div>
-
-{# summary form (unchanged) #}
-<form id="sum-form" method="post" action="{{ url_for('summary.view_from_html') }}" style="display:none;">
-  <input type="hidden" name="doc_type" value="tribunals">
-  <input type="hidden" name="doc_id" value="{{ tribunals.doc_id }}">
-  <input type="hidden" name="model" value="gemini-2.5-flash">
-  <input type="hidden" name="target_tokens" value="200">
-  <input type="hidden" name="min_tokens" value="70">
-  <textarea name="html" id="sum-html"></textarea>
-</form>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -117,62 +58,10 @@ document.addEventListener('DOMContentLoaded', function () {
   const contentArea = document.querySelector('.act-content');
   if (!contentArea) return;
 
-  /* helper: add a “row card” to important blocks */
-  function boxify(){
-    // clear previously added boxes (if we toggled NER)
-    contentArea.querySelectorAll('.ld-box').forEach(el => el.classList.remove('ld-box'));
-
-    const BLOCK_SEL = 'p, blockquote, li, section, article, div, table, ul, ol, pre, h1, h2, h3, h4, h5, h6';
-    const nodes = Array.from(contentArea.querySelectorAll(BLOCK_SEL));
-
-    nodes.forEach(el => {
-      if (!el.textContent.trim()) return;                                   // skip empties
-      const isDirect = (el.parentElement === contentArea);
-      const hasMarker = el.matches('[data-structure]') || el.querySelector('[data-structure]');
-      const isHeading = el.matches('h1,h2,h3,h4,h5,h6');
-
-      // box direct child blocks, any block that carries/contains a marker, and headings
-      if (isDirect || hasMarker || isHeading){
-        el.classList.add('ld-box');
-      }
-    });
-
-    // prefer LI boxes over boxing the parent list (avoid double borders)
-    contentArea.querySelectorAll('ul.ld-box, ol.ld-box').forEach(list => {
-      if (list.querySelector('li.ld-box')) list.classList.remove('ld-box');
-    });
-  }
-
-  /* CLICK: toggle bold + stronger accent on a box (supports multi-select).
-     Don’t trigger when clicking links. */
-  function enableBoxToggles() {
-    contentArea.addEventListener('click', (e) => {
-      if (e.target.closest('a')) return; // let links work
-      const box = e.target.closest('.ld-box');
-      if (!box || !contentArea.contains(box)) return;
-      box.classList.toggle('ld-active');
-    });
-  }
-
-  /* 0) Clean noisy tags */
+  // Remove scripts/styles/linked styles in scraped chunk
   contentArea.querySelectorAll('script,style,link[rel="stylesheet"],noscript').forEach(n => n.remove());
 
-  /* 0.5) Rewrite legacy links → /doc/<id> */
-  (function rewriteLegacyToResolver() {
-    function rewrite(selector, re) {
-      contentArea.querySelectorAll(selector).forEach(a => {
-        const href = a.getAttribute('href') || '';
-        const m = href.match(re);
-        if (m) a.setAttribute('href', '/doc/' + m[1]);
-      });
-    }
-    rewrite('a[href^="/tribunals/view/"]', /^\/tribunals\/view\/(\d+)/);
-    rewrite('a[href^="/sc/view/"]',        /^\/sc\/view\/(\d+)/);
-    rewrite('a[href^="/judgments/view/"]', /^\/judgments\/view\/(\d+)/);
-    rewrite('a[href^="/acts/view/"]',      /^\/acts\/view\/(\d+)/);
-  })();
-
-  /* 1) Rescue inner .judgments if a whole page was embedded */
+  // If a full page was embedded, pull inner .judgments into contentArea
   (function rescueIfNeeded() {
     if (contentArea.querySelector('[data-structure]')) return;
     const judg = contentArea.querySelector('.judgments') || document.querySelector('.judgments');
@@ -182,17 +71,7 @@ document.addEventListener('DOMContentLoaded', function () {
     contentArea.innerHTML = ""; contentArea.appendChild(frag);
   })();
 
-  /* 1.1) Hide bits we never want */
-  (function stripInsideJudgments() {
-    contentArea.querySelectorAll(
-      '.ad_doc, .ad-doc, [class*="ad_doc"], ' +                 // ads
-      '.doc_citations, .doc-citations, [class*="doc_citations"], ' + // citation blob
-      '.doc_title, .doc-title, [class*="doc_title"]'  +
-      '.hidden_text, .hidden-text, [class*="hidden_text"]'           // duplicate title
-    ).forEach(n => n.remove());
-  })();
-
-  /* 2) Trim to annotated region */
+  // Trim chrome: keep only between first and last annotated block
   (function trimToAnnotated() {
     const ann = contentArea.querySelectorAll('[data-structure]');
     if (!ann.length) return;
@@ -209,13 +88,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   })();
 
-  /* add boxes + toggles now (works for raw + annotated) */
-  boxify();
-  enableBoxToggles();
-
   if (!contentArea.querySelector('[data-structure]')) return;
 
-  /* 3) Two-column layout (unchanged) */
+  // Build two-column layout
   const parent = contentArea.parentNode;
   const layout = document.createElement('div'); layout.className = 'ds-layout';
   const aside  = document.createElement('aside'); aside.className = 'ds-aside';
@@ -224,33 +99,23 @@ document.addEventListener('DOMContentLoaded', function () {
   layout.appendChild(aside); layout.appendChild(main); main.appendChild(contentArea);
 
   const card = document.createElement('div'); card.className = 'ds-card';
-  const title = document.createElement('div'); title.className = 'ds-title';
+  const title = document.createElement('div'); title.className = 'ds-title'; title.textContent = 'Rhetorical Roles';
   const nav = document.createElement('div'); nav.id = 'ds-nav';
   const controls = document.createElement('div'); controls.className = 'ds-controls';
   const clearBtn = document.createElement('button'); clearBtn.className = 'ds-btn'; clearBtn.type = 'button'; clearBtn.textContent = 'Clear';
   controls.appendChild(clearBtn); card.appendChild(title); card.appendChild(nav); card.appendChild(controls); aside.appendChild(card);
 
-  /* 3.5) Summarize → chip (unchanged) */
-  const summarizeBtn = document.createElement('button');
-  summarizeBtn.className = 'ds-chip';
-  summarizeBtn.type = 'button';
-  summarizeBtn.textContent = 'Summarize →';
-  nav.appendChild(summarizeBtn);
-  summarizeBtn.addEventListener('click', () => {
-    const form = document.getElementById('sum-form');
-    const area = document.getElementById('sum-html');
-    area.value = contentArea.innerHTML;
-    form.submit();
-  });
-
-  /* 4) Role discovery (unchanged) */
+  // Collect roles dynamically
   const nodes = Array.from(contentArea.querySelectorAll('[data-structure]'));
+
+  // === Section-aware helpers ===
   const BLOCK_SEL = 'p, blockquote, li, section, article, div, table, ul, ol';
   function blockOf(el){ return el.closest(BLOCK_SEL) || el; }
   function hasMarker(el){ return el.matches?.('[data-structure]') || !!el.querySelector?.('[data-structure]'); }
   function sectionBlocksFor(startEl){
     const startBlock = blockOf(startEl);
-    const blocks = []; if (!startBlock) return blocks;
+    const blocks = [];
+    if (!startBlock) return blocks;
     blocks.push(startBlock);
     const it = document.createNodeIterator(contentArea, NodeFilter.SHOW_ELEMENT, {
       acceptNode(node){
@@ -259,11 +124,11 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
     let node;
-    while ((node = it.nextNode())) {
+    while ((node = it.nextNode())){
       if (hasMarker(node)) break;
       const blk = node.matches(BLOCK_SEL) ? node : node.closest(BLOCK_SEL);
-      if (blk && blk.closest('.act-content') === contentArea) {
-        if (!blocks.includes(blk) && !blocks.some(b => b.contains(blk)) && !blocks.some(b => blk.contains(b))) {
+      if (blk && blk.closest('.act-content') === contentArea){
+        if (!blocks.includes(blk) && !blocks.some(b => b.contains(blk)) && !blocks.some(b => blk.contains(b))){
           blocks.push(blk);
         }
       }
@@ -281,15 +146,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!order.includes(key)) order.push(key);
   });
 
-  /* 5) Colors (unchanged) */
+  // Dynamic colors
   const PALETTE = [
     'rgba(96,165,250,.18)','rgba(251,191,36,.20)','rgba(167,139,250,.18)',
     'rgba(52,211,153,.18)','rgba(244,114,182,.18)','rgba(248,113,113,.18)',
     'rgba(56,189,248,.18)','rgba(250,204,21,.18)','rgba(163,230,53,.18)','rgba(251,113,133,.18)'
   ];
-  const roleColor = {}; order.forEach((k,i)=> roleColor[k]=PALETTE[i%PALETTE.length]);
-
+  const roleColor = {}; order.forEach((k,i) => roleColor[k] = PALETTE[i % PALETTE.length]);
   const active = new Set();
+
   function on(key, sc){
     const chip = chips.get(key);
     chip.setAttribute('data-active','true');
@@ -297,12 +162,16 @@ document.addEventListener('DOMContentLoaded', function () {
     chip.style.borderColor = 'rgba(0,0,0,.08)';
 
     const list = byType[key] || [];
-    const blocks = new Set(); list.forEach(el => sectionBlocksFor(el).forEach(b => blocks.add(b)));
-    blocks.forEach(b => { b.classList.add('ds-highlight'); b.style.backgroundColor = roleColor[key]; });
+    const blocks = new Set();
+    list.forEach(el => sectionBlocksFor(el).forEach(b => blocks.add(b)));
+    blocks.forEach(b => {
+      b.classList.add('ds-highlight');
+      b.style.backgroundColor = roleColor[key];
+    });
 
-    if (sc && list.length) {
+    if (sc && list.length){
       const firstBlock = blockOf(list[0]);
-      if (firstBlock) {
+      if (firstBlock){
         firstBlock.classList.add('ds-focus');
         firstBlock.scrollIntoView({behavior:'smooth', block:'center'});
         setTimeout(()=>firstBlock.classList.remove('ds-focus'),1500);
@@ -310,22 +179,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     active.add(key);
   }
+
   function off(key){
     const chip = chips.get(key);
     chip.setAttribute('data-active','false');
-    chip.style.backgroundColor = ''; chip.style.borderColor = '';
-
+    chip.style.backgroundColor = '';
+    chip.style.borderColor = '';
     const list = byType[key] || [];
-    const blocks = new Set(); list.forEach(el => sectionBlocksFor(el).forEach(b => blocks.add(b)));
-    blocks.forEach(b => { b.classList.remove('ds-highlight','ds-focus'); b.style.backgroundColor = ''; });
-
+    const blocks = new Set();
+    list.forEach(el => sectionBlocksFor(el).forEach(b => blocks.add(b)));
+    blocks.forEach(b => { b.classList.remove('ds-highlight','ds-focus'); b.style.backgroundColor=''; });
     active.delete(key);
   }
+
   function toggle(key, sc){ (chips.get(key).getAttribute('data-active') === 'true') ? off(key) : on(key, sc); }
   function clearAll(){ Array.from(active).forEach(k => off(k)); }
   clearBtn.addEventListener('click', clearAll);
 
-  /* 6) Render chips (unchanged) */
+  // Render chips
   order.forEach(key => {
     const chip = document.createElement('button');
     chip.className = 'ds-chip';
@@ -333,18 +204,19 @@ document.addEventListener('DOMContentLoaded', function () {
     chip.textContent = labels[key];
     chip.setAttribute('data-active','false');
     chip.addEventListener('click', () => toggle(key, true));
-    chips.set(key, chip); nav.appendChild(chip);
+    chips.set(key, chip);
+    nav.appendChild(chip);
   });
 
-  /* 7) /doc/<id> resolver (unchanged) */
+  // Intercept /doc/<id> links inside judgment and route to districtcourt view
   contentArea.addEventListener('click', function (event) {
     const a = event.target.closest('a'); if (!a) return;
     const raw = a.getAttribute('href') || '', abs = a.href || '';
     const m = (raw.match(/\/doc\/(\d+)/) || abs.match(/\/doc\/(\d+)/));
-    if (m && m[1]) { event.preventDefault(); window.location.href = `/doc/${m[1]}`; }
+    if (m && m[1]) { event.preventDefault(); window.location.href = `/districtcourt/view/${m[1]}`; }
   });
 
-  /* 8) highlight param + ds= (unchanged) */
+  // ?highlight= and ?ds=
   const params = new URLSearchParams(window.location.search);
   const highlightId = params.get('highlight');
   if (highlightId) {
@@ -360,11 +232,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const dsParam = params.get('ds');
   if (dsParam) dsParam.split(',').map(s => s.trim().toLowerCase()).forEach(k => byType[k] && on(k, false));
 
-  /* === NER toggle (unchanged logic, re-box after swap) === */
-  const NER_API = "{{ url_for('tribunals.api_ner_html', doc_id=tribunals.doc_id) }}";
+  // === NER toggle with filter checkboxes ===
+  const DOC_ID = "{{ doc.doc_id }}";
+  const NER_API = "{{ url_for('districtcourt.api_ner_html', doc_id=doc.doc_id) }}";
 
   contentArea.setAttribute('data-ner', 'off');
-  let RAW_HTML = contentArea.innerHTML;  // boxed version
+  let RAW_HTML = contentArea.innerHTML;
   let NER_HTML = null;
 
   let activeLabels = new Set();
@@ -372,12 +245,15 @@ document.addEventListener('DOMContentLoaded', function () {
   let nerPanelBuilt = false;
 
   const nerChip = document.createElement('button');
-  nerChip.className = 'ds-chip'; nerChip.type = 'button';
-  nerChip.textContent = 'NER'; nerChip.setAttribute('data-active','false');
+  nerChip.className = 'ds-chip';
+  nerChip.type = 'button';
+  nerChip.textContent = 'NER';
+  nerChip.setAttribute('data-active','false');
   nav.appendChild(nerChip);
 
   const nerPanel = document.createElement('div');
-  nerPanel.className = 'ds-ner-panel'; nerPanel.style.display = 'none';
+  nerPanel.className = 'ds-ner-panel';
+  nerPanel.style.display = 'none';
   nav.appendChild(nerPanel);
 
   function indexEntities() {
@@ -392,27 +268,36 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function buildNerPanel() {
     nerPanel.innerHTML = '';
-    const ctrlRow = document.createElement('div'); ctrlRow.className = 'ds-controls';
-    const theAll  = document.createElement('button'); theAll.className = 'ds-btn'; theAll.textContent = 'All';
-    const theNone = document.createElement('button'); theNone.className = 'ds-btn'; theNone.textContent = 'None';
-    ctrlRow.appendChild(theAll); ctrlRow.appendChild(theNone); nerPanel.appendChild(ctrlRow);
+    const ctrlRow = document.createElement('div');
+    ctrlRow.className = 'ds-controls';
+    const allBtn  = document.createElement('button'); allBtn.className = 'ds-btn'; allBtn.textContent = 'All';
+    const noneBtn = document.createElement('button'); noneBtn.className = 'ds-btn'; noneBtn.textContent = 'None';
+    ctrlRow.appendChild(allBtn); ctrlRow.appendChild(noneBtn);
+    nerPanel.appendChild(ctrlRow);
 
     const entries = Array.from(labelIndex.entries()).sort((a,b) => b[1].length - a[1].length);
     entries.forEach(([label, nodes]) => {
-      const row = document.createElement('label'); row.className = 'ds-ner-item';
-      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = label; cb.checked = false;
+      const row = document.createElement('label');
+      row.className = 'ds-ner-item';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.value = label; cb.checked = false;
       const name = document.createElement('span'); name.textContent = label;
       const count = document.createElement('span'); count.className = 'ds-ner-count'; count.textContent = nodes.length;
-      row.appendChild(cb); row.appendChild(name); row.appendChild(count); nerPanel.appendChild(row);
-      cb.addEventListener('change', () => { if (cb.checked) activeLabels.add(label); else activeLabels.delete(label); applyNerFilter(); });
+      row.appendChild(cb); row.appendChild(name); row.appendChild(count);
+      nerPanel.appendChild(row);
+
+      cb.addEventListener('change', () => {
+        if (cb.checked) activeLabels.add(label); else activeLabels.delete(label);
+        applyNerFilter();
+      });
     });
 
-    theAll.addEventListener('click', () => {
+    allBtn.addEventListener('click', () => {
       activeLabels = new Set(Array.from(labelIndex.keys()));
       nerPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
       applyNerFilter();
     });
-    theNone.addEventListener('click', () => {
+    noneBtn.addEventListener('click', () => {
       activeLabels.clear();
       nerPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
       applyNerFilter();
@@ -423,42 +308,41 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function applyNerFilter() {
     contentArea.querySelectorAll('.ner').forEach(span => span.classList.add('ner-muted'));
-    activeLabels.forEach(label => (labelIndex.get(label) || []).forEach(span => span.classList.remove('ner-muted')));
+    activeLabels.forEach(label => {
+      (labelIndex.get(label) || []).forEach(span => span.classList.remove('ner-muted'));
+    });
   }
 
   function rebuildRoleIndex() {
     const nodesNew = Array.from(contentArea.querySelectorAll('[data-structure]'));
-    byType = Object.create(null); labels = Object.create(null); order.length = 0;
+    byType = Object.create(null);
+    labels = Object.create(null);
+    order.length = 0;
     nodesNew.forEach(el => {
-      const raw = (el.getAttribute('data-structure') || '').trim(); if (!raw) return;
-      const key = raw.toLowerCase(); (byType[key] ||= []).push(el);
-      if (!(key in labels)) labels[key] = raw; if (!order.includes(key)) order.push(key);
+      const raw = (el.getAttribute('data-structure') || '').trim();
+      if (!raw) return;
+      const key = raw.toLowerCase();
+      (byType[key] ||= []).push(el);
+      if (!(key in labels)) labels[key] = raw;
+      if (!order.includes(key)) order.push(key);
     });
   }
 
   nerChip.addEventListener('click', async () => {
     const isOn = nerChip.getAttribute('data-active') === 'true';
+
     if (!isOn) {
       try {
         if (!NER_HTML) {
-          nerChip.disabled = true; nerChip.textContent = 'NER (loading...)';
+          nerChip.disabled = true;
+          nerChip.textContent = 'NER (loading...)';
           const res = await fetch(NER_API, { headers: { 'Accept': 'application/json' }});
           const data = await res.json();
           if (!res.ok || !data.html) throw new Error(data.error || 'NER API failed');
           NER_HTML = data.html;
         }
+
         contentArea.innerHTML = NER_HTML;
-
-        // strip unwanted blocks that may come back with NER HTML
-        contentArea.querySelectorAll(
-          '.ad_doc, .ad-doc, [class*="ad_doc"], ' +
-          '.doc_citations, .doc-citations, [class*="doc_citations"], ' +
-          '.doc_title, .doc-title, [class*="doc_title"]'
-        ).forEach(n => n.remove());
-
-        // Re-BOXIFY and keep click toggles
-        boxify();
-
         contentArea.setAttribute('data-ner', 'on');
         nerChip.setAttribute('data-active','true');
 
@@ -472,33 +356,28 @@ document.addEventListener('DOMContentLoaded', function () {
         nerPanel.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
         applyNerFilter();
 
-        // re-bind link interceptor
         contentArea.addEventListener('click', function (event) {
           const a = event.target.closest('a'); if (!a) return;
           const raw = a.getAttribute('href') || '', abs = a.href || '';
           const m = (raw.match(/\/doc\/(\d+)/) || abs.match(/\/doc\/(\d+)/));
-          if (m && m[1]) { event.preventDefault(); window.location.href = `/doc/${m[1]}`; }
+          if (m && m[1]) { event.preventDefault(); window.location.href = `/districtcourt/view/${m[1]}`; }
         });
 
       } catch (e) {
         console.error('[NER] toggle failed', e);
         alert('Failed to load NER. Check server logs.');
       } finally {
-        nerChip.disabled = false; nerChip.textContent = 'NER';
+        nerChip.disabled = false;
+        nerChip.textContent = 'NER';
       }
     } else {
       contentArea.innerHTML = RAW_HTML;
-
-      // keep boxes when returning to raw
-      boxify();
-
       contentArea.setAttribute('data-ner', 'off');
       nerChip.setAttribute('data-active','false');
       nerPanel.style.display = 'none';
       rebuildRoleIndex();
     }
   });
-
 });
 </script>
 {% endblock %}

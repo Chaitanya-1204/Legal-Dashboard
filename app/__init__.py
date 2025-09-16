@@ -1,7 +1,7 @@
 # app/__init__.py
 # This file contains the application factory. It sets up the core app,
 # connects to the database, and registers all the blueprints.
-
+from dotenv import load_dotenv
 from flask import Flask, render_template
 from pymongo import MongoClient
 import os
@@ -18,6 +18,9 @@ def create_app():
     
     app = Flask(__name__, instance_relative_config=True)
     
+
+    ENV_PATH = os.path.join(os.path.dirname(__file__), "services", ".env")
+    load_dotenv(ENV_PATH) 
     # --- Database Configuration ---
     # It's best practice to use environment variables for sensitive data.
     MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/")
@@ -39,6 +42,24 @@ def create_app():
 
         from .tribunals import routes as tribunals_routes
         app.register_blueprint(tribunals_routes.tribunals_bp, url_prefix='/tribunals')
+
+        from .districtcourt import routes as districtcourt_routes
+        app.register_blueprint(districtcourt_routes.districtcourt_bp, url_prefix='/districtcourt')
+
+        # app/__init__.py
+        # app/__init__.py  (inside create_app, after you construct app)
+        #from app.services.summarize import summary_bp
+        #app.register_blueprint(summary_bp, url_prefix="/summary")
+
+        from app.services.ner import ner_bp
+        app.register_blueprint(ner_bp, url_prefix="/services/ner")
+
+        from .high_courts.routes import high_courts_bp
+        app.register_blueprint(high_courts_bp, url_prefix="/high_courts")
+
+
+        from .resolver import resolver_bp
+        app.register_blueprint(resolver_bp)
 
         @app.route('/')
         def home():

@@ -1,0 +1,175 @@
+{# app/services/summarize/templates/summarize/summary_view.html #}
+{% extends "base.html" %}
+{% block title %}Summary – {{ doc_type|capitalize }} {{ doc_id }}{% endblock %}
+
+{% block content %}
+<style>
+  /* ---------------- Typography & palette ---------------- */
+  :root{
+    --ink:#0f172a;          /* slate-900 */
+    --muted:#64748b;        /* slate-500 */
+    --muted-2:#475569;      /* slate-600 */
+    --bg:#f8fafc;           /* slate-50  */
+    --card:#ffffff;
+    --br:#e2e8f0;           /* slate-200 */
+    --br-2:#cbd5e1;         /* slate-300 */
+    --ring:#2563eb;         /* blue-600  */
+    --shadow:0 10px 28px rgba(15,23,42,.06);
+  }
+
+  .sum-wrap{max-width:1100px;margin:2rem auto;padding:0 1rem;font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";}
+  .sum-wrap{font-synthesis-weight:none;font-kerning:normal;font-variant-ligatures: contextual; font-optical-sizing:auto}
+
+  .sum-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;margin-bottom:.25rem}
+  .sum-title{font-weight:900;color:var(--ink);font-size:1.3rem;letter-spacing:.1px}
+  .sum-right{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .badge{background:#eef2ff;border:1px solid #e0e7ff;padding:.22rem .6rem;border-radius:.5rem;font-size:.78rem;color:#4338ca;font-weight:600}
+  .sub{color:var(--muted);font-size:.9rem;margin-bottom:1rem}
+
+  /* ---------------- Grid ---------------- */
+  .ld-summary{display:grid;grid-template-columns:1fr;gap:1rem}
+  @media (min-width:920px){.ld-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+  /* ---------------- Card ---------------- */
+  .ld-summary > section{
+    position:relative;background:var(--card);
+    border:1px solid var(--br);border-radius:.9rem;
+    padding:1rem 1.15rem 1.05rem;
+    box-shadow:0 1px 0 rgba(2,6,23,.02);
+    transition:box-shadow .18s ease, border-color .18s ease, background-color .18s ease, transform .10s ease;
+    cursor:pointer; outline:none;
+    --sel-bg:rgba(37,99,235,.06);
+    --sel-br:#93c5fd;
+  }
+  .ld-summary > section:hover{border-color:var(--br-2); box-shadow:var(--shadow)}
+  .ld-summary > section.is-selected{
+    background:
+      linear-gradient(180deg, var(--sel-bg), #fff);
+    border-color:var(--sel-br);
+    box-shadow:0 14px 36px color-mix(in oklab, var(--sel-br) 30%, transparent);
+  }
+  /* slim accent bar when selected */
+  .ld-summary > section.is-selected::before{
+    content:"";position:absolute;inset:0 0 0 auto;width:5px;border-radius:.9rem;
+    background:var(--sel-br);opacity:.85;
+  }
+
+  .tick{
+    position:absolute;top:.55rem;right:.55rem;
+    width:22px;height:22px;border-radius:999px;border:1px solid var(--br);background:#fff;
+    display:grid;place-items:center;font-size:.9rem;color:#10b981;opacity:0;transform:scale(.85);
+    transition:opacity .15s ease, transform .15s ease, border-color .15s ease;
+    pointer-events:none;
+  }
+  .ld-summary > section.is-selected .tick{opacity:1;transform:scale(1);border-color:#a7f3d0}
+
+  /* ---------------- Headings & content ---------------- */
+  .ld-summary h3{
+    margin:.1rem 0 .6rem;
+    font-weight:900;            /* BOLD headings */
+    font-size:1.05rem;          /* heading size */
+    letter-spacing:.2px;
+    color:var(--ink);
+    display:flex;align-items:center;gap:.55rem
+  }
+  .ld-summary h3 .k{font-variation-settings:"wght" 900}
+
+  /* body text */
+  .ld-summary p{margin:.2rem 0;line-height:1.7;color:#1f2937;font-size:1rem}
+  /* key-value lines like “Appellants:” */
+  .ld-summary p strong{font-weight:800;color:var(--muted-2);margin-right:.25rem}
+  /* slightly smaller helper text (e.g., citations) */
+  .ld-summary .fine{color:var(--muted);font-size:.92rem}
+
+  /* lists */
+  .ld-summary ul{margin:.35rem 0 0 1.1rem;padding:0}
+  .ld-summary li{margin:.25rem 0;line-height:1.65;font-size:1rem}
+  .ld-summary li::marker{color:var(--muted-2)}
+
+  /* Per-section highlight hues */
+  .ld-summary > section[data-key="parties"]     {--sel-bg:rgba(59,130,246,.12); --sel-br:#93c5fd}
+  .ld-summary > section[data-key="bench"]       {--sel-bg:rgba(99,102,241,.12); --sel-br:#c4b5fd}
+  .ld-summary > section[data-key="issues"]      {--sel-bg:rgba(234,179,8,.18);  --sel-br:#fde68a}
+  .ld-summary > section[data-key="facts"]       {--sel-bg:rgba(16,185,129,.14); --sel-br:#86efac}
+  .ld-summary > section[data-key="arguments"]   {--sel-bg:rgba(2,132,199,.14);  --sel-br:#7dd3fc}
+  .ld-summary > section[data-key="holding"]     {--sel-bg:rgba(34,197,94,.14);  --sel-br:#86efac}
+  .ld-summary > section[data-key="disposition"] {--sel-bg:rgba(244,63,94,.12);  --sel-br:#fda4af}
+  .ld-summary > section[data-key="citations"]   {--sel-bg:rgba(148,163,184,.18);--sel-br:#cbd5e1}
+
+  /* icons & chrome */
+  .ico{width:22px;height:22px;display:inline-grid;place-items:center;border:1px solid var(--br);border-radius:.5rem;font-size:.9rem;background:#fff;color:#6b7280}
+  .hlp{font-size:.85rem;color:var(--muted)}
+  .btn{border:1px solid var(--br);background:#fff;padding:.4rem .7rem;border-radius:.6rem;font-size:.88rem;color:#374151;cursor:pointer;font-weight:600}
+  .btn:hover{background:var(--bg)}
+</style>
+
+<div class="sum-wrap">
+  <div class="sum-head">
+    <div class="sum-title">AI Summary</div>
+    <div class="sum-right">
+      <button id="clearBtn" class="btn" type="button">Clear highlights</button>
+      <span class="badge">{{ doc_type|capitalize }} • {{ doc_id }}</span>
+    </div>
+  </div>
+
+
+  <div id="summary-slot">
+    {# Expecting structured HTML from the summarizer (article.ld-summary > section …) #}
+    {{ summary|safe }}
+  </div>
+
+  {# Fallback if the model returns plain text: wrap it into a single polished card #}
+  <template id="fallback-card">
+    <article class="ld-summary">
+      <section data-key="summary">
+        <span class="tick">✓</span>
+        <h3><span class="ico">🧾</span><span class="k">Summary</span></h3>
+        <div class="content"></div>
+      </section>
+    </article>
+  </template>
+</div>
+
+<script>
+(function(){
+  const slot = document.getElementById('summary-slot');
+
+  // If the model returned plain text, auto-wrap into a single card
+  if (!slot.querySelector('.ld-summary')) {
+    const tpl = document.getElementById('fallback-card').content.cloneNode(true);
+    tpl.querySelector('.content').innerText = slot.textContent.trim();
+    slot.innerHTML = "";
+    slot.appendChild(tpl);
+  }
+
+  const cards = Array.from(slot.querySelectorAll('.ld-summary > section'));
+  if (!cards.length) return;
+
+  // Make cards keyboard accessible
+  cards.forEach(c => { c.tabIndex = 0; c.setAttribute('role','option'); c.setAttribute('aria-selected','false'); });
+
+  const setSel = (el, on) => {
+    el.classList.toggle('is-selected', on);
+    el.setAttribute('aria-selected', on ? 'true' : 'false');
+  };
+
+  const toggle = (el) => setSel(el, !el.classList.contains('is-selected'));
+  const clearAll = () => cards.forEach(c => setSel(c, false));
+
+  // Interactions
+  cards.forEach(card => {
+    // single-click toggles (multi-selection)
+    card.addEventListener('click', () => toggle(card));
+    // double-click removes highlight on that card
+    card.addEventListener('dblclick', (e) => { e.preventDefault(); setSel(card, false); });
+    // keyboard support
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(card); }
+      if (e.key === 'Escape') { e.preventDefault(); setSel(card, false); }
+    });
+  });
+
+  document.getElementById('clearBtn')?.addEventListener('click', clearAll);
+})();
+</script>
+{% endblock %}
