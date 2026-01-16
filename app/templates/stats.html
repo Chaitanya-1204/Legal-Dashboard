@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='stats.css') }}">
+
+<div class="main-wrapper">
+  <div class="max-w-7xl mx-auto">
+
+    <!-- TOP BAR WITH THEME TOGGLE -->
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <span class="top-bar-pill">Insights</span>
+        <span class="top-bar-text">Corpus overview for your legal data</span>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" type="button">
+        🌙 Dark
+      </button>
+    </div>
+
+    <!-- HERO -->
+    <section class="mb-6">
+      <p class="text-gray-600 text-sm md:text-base hero-text">
+        Analysing
+        <span class="font-semibold text-gray-900" id="hero-total-docs">0</span>
+        documents and
+        <span class="font-semibold text-gray-900" id="hero-total-words">0</span>
+        words across courts, acts, blogs, books and more.
+      </p>
+    </section>
+
+    <!-- KEY INSIGHT -->
+    <section class="mb-6">
+      <div class="card card-hero">
+        <h3 class="card-hero-title">📌 Key Insight</h3>
+        <p class="card-hero-text" id="insight-text">
+          Loading insight...
+        </p>
+      </div>
+    </section>
+
+    <!-- PAGE HEADER -->
+    <header class="mb-8">
+      <h1 class="page-title">Legal Analytics Dashboard</h1>
+      <p class="page-subtitle">A comprehensive overview of your legal document statistics.</p>
+    </header>
+
+    <!-- STATS CARDS -->
+    <section class="stats-grid">
+      <div class="card stat-card stat-card--blue">
+        <h3 class="stat-label">Total Documents</h3>
+        <p class="stat-value" id="total-docs">0</p>
+      </div>
+      <div class="card stat-card stat-card--indigo">
+        <h3 class="stat-label">
+          Total Word Count
+          <span class="tooltip-icon" title="Sum of all words across all documents in your corpus.">ⓘ</span>
+        </h3>
+        <p class="stat-value" id="total-words">0</p>
+      </div>
+      <div class="card stat-card stat-card--green">
+        <h3 class="stat-label">High Court Judgments</h3>
+        <p class="stat-value" id="hc-judgments">0</p>
+      </div>
+      <div class="card stat-card stat-card--red">
+        <h3 class="stat-label">Supreme Court Judgments</h3>
+        <p class="stat-value" id="sc-judgments">0</p>
+      </div>
+      <div class="card stat-card stat-card--amber">
+        <h3 class="stat-label">Tribunal Cases</h3>
+        <p class="stat-value" id="tribunal-cases">0</p>
+      </div>
+      <div class="card stat-card stat-card--violet">
+        <h3 class="stat-label">Acts</h3>
+        <p class="stat-value" id="acts-cases">0</p>
+      </div>
+      <div class="card stat-card stat-card--cyan">
+        <h3 class="stat-label">Blogs</h3>
+        <p class="stat-value" id="blogs-count">0</p>
+      </div>
+      <div class="card stat-card stat-card--pink">
+        <h3 class="stat-label">Books</h3>
+        <p class="stat-value" id="books-count">0</p>
+      </div>
+      <div class="card stat-card stat-card--slate">
+        <h3 class="stat-label">Others</h3>
+        <p class="stat-value" id="others-count">0</p>
+      </div>
+      <div class="card stat-card stat-card--teal">
+        <h3 class="stat-label">District Court Cases</h3>
+        <p class="stat-value" id="district-court-cases">0</p>
+      </div>
+    </section>
+
+    <!-- CHARTS CAROUSEL (CENTERED + CONTROLS) -->
+    <section class="chart-carousel">
+
+      <!-- 1. Document Type (with toggle) -->
+      <div class="card chart-slide active">
+        <h3 class="chart-title">Document Type Distribution</h3>
+        <div class="chart-toggle-row">
+          <button class="doc-metric-toggle toggle-active" data-metric="count">
+            Count
+          </button>
+          <button class="doc-metric-toggle" data-metric="words">
+            Word Count
+          </button>
+        </div>
+        <div class="chart-container">
+          <canvas id="docTypeChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 2. File Distribution by Word Count -->
+      <div class="card chart-slide">
+        <h3 class="chart-title">File Distribution by Word Count</h3>
+        <div class="chart-container">
+          <canvas id="wordCountDistributionChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 3. Word Count by Document Type -->
+      <div class="card chart-slide">
+        <h3 class="chart-title">Word Count by Document Type</h3>
+        <div class="chart-container">
+          <canvas id="wordCountChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 4. Average Word Count Per Document -->
+      <div class="card chart-slide">
+        <h3 class="chart-title">Average Word Count Per Document</h3>
+        <div class="chart-container">
+          <canvas id="avgWordCountChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 5. Acts Distribution -->
+      <div class="card chart-slide">
+        <h3 class="chart-title">Acts Distribution by Category (Top 15)</h3>
+        <div class="chart-container">
+          <canvas id="actsDistributionChart"></canvas>
+        </div>
+      </div>
+
+      <!-- CAROUSEL CONTROLS -->
+      <div class="carousel-controls">
+        <button class="carousel-arrow" data-dir="prev">‹</button>
+        <div class="carousel-dots" id="carousel-dots"></div>
+        <button class="carousel-arrow" data-dir="next">›</button>
+      </div>
+
+    </section>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='stats.js') }}"></script>
+{% endblock %}

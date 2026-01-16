@@ -61,6 +61,9 @@ def create_app():
         from .resolver import resolver_bp
         app.register_blueprint(resolver_bp)
 
+        from .stats.routes import stats_bp
+        app.register_blueprint(stats_bp, url_prefix="/stats")
+
         @app.route('/')
         def home():
             """Renders the main homepage."""
